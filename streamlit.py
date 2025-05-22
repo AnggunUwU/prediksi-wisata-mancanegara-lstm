@@ -24,7 +24,7 @@ st.title('📅 Prediksi Kedatangan Wisatawan dengan LSTM')
 # ======================================
 # 1. Upload dan Persiapan Data
 # ======================================
-uploaded_file = st.file_uploader("Upload data Excel (Kolom: Tahun-Bulan, kedatangan)", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload data Excel (Kolom: Tahun-Bulan, Jumlah_Wisatawan)", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
@@ -56,7 +56,7 @@ if uploaded_file:
 
 
     scaler = RobustScaler()  # menggunakan median & IQR, tidak terpengaruh outlier
-    data_scaled = scaler.fit_transform(df['kedatangan'].values.reshape(-1, 1))
+    data_scaled = scaler.fit_transform(df['Jumlah_Wisatawan'].values.reshape(-1, 1))
 
     def create_dataset(data, steps):
         X, y = [], []
@@ -149,7 +149,7 @@ if uploaded_file:
 
         # Tampilkan hasil
         fig2 = plt.figure(figsize=(12, 6))
-        plt.plot(df['Tahun-Bulan'], df['kedatangan'], label='Data Historis', color='blue')
+        plt.plot(df['Tahun-Bulan'], df['Jumlah_Wisatawan'], label='Data Historis', color='blue')
         plt.plot(pred_dates, predictions, label='Prediksi', color='red', marker='o')
 
         # Anotasi nilai prediksi
@@ -191,5 +191,5 @@ else:
     st.warning("""
     Silakan upload file Excel dengan format:
     - Kolom `Tahun-Bulan` (format tanggal)
-    - Kolom `kedatangan` (jumlah wisatawan)
+    - Kolom `Jumlah_Wisatawan` (jumlah wisatawan)
     """)
