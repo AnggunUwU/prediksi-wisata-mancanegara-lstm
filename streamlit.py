@@ -32,7 +32,16 @@ with st.expander("🔍 Lihat Data Historis"):
 st.write("Kolom yang tersedia:", df.columns.tolist())
 
 # ======================================
-# 2. Panel Kontrol
+# 2. Pilih Bandara untuk Prediksi
+# ======================================
+bandara_list = df['pintu Masuk'].unique()
+bandara = st.selectbox("Pilih Bandara untuk Prediksi", bandara_list)
+
+# Filter data berdasarkan bandara yang dipilih
+df_bandara = df[df['pintu Masuk'] == bandara]
+
+# ======================================
+# 3. Panel Kontrol
 # ======================================
 col1, col2, col3 = st.columns(3)
 
@@ -44,15 +53,6 @@ with col2:
 
 with col3:
     future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", min_value=1, max_value=36, value=12)
-
-# ======================================
-# 3. Pilih Bandara untuk Prediksi
-# ======================================
-bandara_list = df['Nama_Bandara'].unique()
-bandara = st.selectbox("Pilih Bandara untuk Prediksi", bandara_list)
-
-# Filter data berdasarkan bandara yang dipilih
-df_bandara = df[df['Nama_Bandara'] == bandara]
 
 # ======================================
 # 4. Preprocessing Data
