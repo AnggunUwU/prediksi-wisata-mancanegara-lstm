@@ -15,14 +15,21 @@ st.title('📅 Prediksi Jumlah Wisatawan dengan LSTM')
 # ======================================
 # 1. Load Data dari GitHub
 # ======================================
-url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/blob/main/data.xlsx"  # Ganti dengan URL dataset Anda
-df = pd.read_excel(url)
-df['Tahun-Bulan'] = pd.to_datetime(df['Tahun-Bulan'])
-df = df.sort_values('Tahun-Bulan')
+url = "https://raw.githubusercontent.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/main/data.xlsx"
+
+try:
+    df = pd.read_excel(url)
+    df['Tahun-Bulan'] = pd.to_datetime(df['Tahun-Bulan'])
+    df = df.sort_values('Tahun-Bulan')
+except Exception as e:
+    st.error(f"Terjadi kesalahan saat memuat data: {e}")
 
 # Tampilkan data
 with st.expander("🔍 Lihat Data Historis"):
     st.dataframe(df, height=200)
+
+# Periksa kolom yang ada
+st.write("Kolom yang tersedia:", df.columns.tolist())
 
 # ======================================
 # 2. Panel Kontrol
@@ -53,6 +60,10 @@ def create_dataset(data, steps):
 
 X, y = create_dataset(data_scaled, time_steps)
 X = X.reshape(X.shape[0], X.shape[1], 1)
+
+# Tampilkan bentuk data
+st.write("Bentuk data X:", X.shape)
+st.write("Bentuk data y:", y.shape)
 
 # ======================================
 # 4. Training Model
