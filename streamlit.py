@@ -46,10 +46,19 @@ with col3:
     future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", min_value=1, max_value=36, value=12)
 
 # ======================================
-# 3. Preprocessing Data
+# 3. Pilih Bandara untuk Prediksi
+# ======================================
+bandara_list = df['Nama_Bandara'].unique()
+bandara = st.selectbox("Pilih Bandara untuk Prediksi", bandara_list)
+
+# Filter data berdasarkan bandara yang dipilih
+df_bandara = df[df['Nama_Bandara'] == bandara]
+
+# ======================================
+# 4. Preprocessing Data
 # ======================================
 scaler = RobustScaler()  # menggunakan median & IQR, tidak terpengaruh outlier
-data_scaled = scaler.fit_transform(df['Jumlah_Wisatawan'].values.reshape(-1, 1))
+data_scaled = scaler.fit_transform(df_bandara['Jumlah_Wisatawan'].values.reshape(-1, 1))
 
 def create_dataset(data, steps):
     X, y = [], []
@@ -66,7 +75,7 @@ st.write("Bentuk data X:", X.shape)
 st.write("Bentuk data y:", y.shape)
 
 # ======================================
-# 4. Training Model
+# 5. Training Model
 # ======================================
 split = int(0.8 * len(X))
 X_train, X_test = X[:split], X[split:]
@@ -86,7 +95,7 @@ with st.spinner(f'Melatih model dengan {epochs} epoch...'):
                         verbose=0)
 
 # ======================================
-# 5. Evaluasi Model
+# 6. Evaluasi Model
 # ======================================
 def calculate_metrics(actual, predicted):
     mae = mean_absolute_error(actual, predicted)
@@ -107,7 +116,7 @@ col2.metric("Test MAE", f"{test_mae:,.0f}", delta=f"{(test_mae-train_mae)/train_
 col3.metric("Test MAPE", f"{test_mape:.1f}%", "Baik" if test_mape < 10 else "Cukup")
 
 # ======================================
-# 6. Visualisasi Hasil
+# 7. Visualisasi Hasil
 # ======================================
 st.subheader("📈 Grafik Hasil")
 
@@ -115,13 +124,13 @@ tab1, tab2 = st.tabs(["Training vs Test", "Prediksi Masa Depan"])
 
 with tab1:
     fig1 = plt.figure(figsize=(12, 6))
-    plt.plot(df['Tahun-Bulan'][time_steps:split+time_steps], scaler.inverse_transform(y_train.reshape(-1, 1)),
+    plt.plot(df_bandara['Tahun-Bulan'][time_steps:split+time_steps], scaler.inverse_transform(y_train.reshape(-1, 1)),
              label='Train Aktual', color='blue')
-    plt.plot(df['Tahun-Bulan'][split+time_steps:], scaler.inverse_transform(y_test.reshape(-1, 1)),
+    plt.plot(df_bandara['Tahun-Bulan'][split+time_steps:], scaler.inverse_transform(y_test.reshape(-1, 1)),
              label='Test Aktual', color='green')
-    plt.plot(df['Tahun-Bulan'][time_steps:split+time_steps], train_pred,
+    plt.plot(df_bandara['Tahun-Bulan'][time_steps:split+time_steps], train_pred,
              label='Prediksi Train', linestyle='--', color='red')
-    plt.plot(df['Tahun-Bulan'][split+time_steps:], test_pred,
+    plt.plot(df_bandara['Tahun-Bulan'][split+time_steps:], test_pred,
              label='Prediksi Test', linestyle='--', color='orange')
     plt.title('Perbandingan Data Aktual vs Prediksi')
     plt.legend()
@@ -139,14 +148,14 @@ with tab2:
 
     predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
     pred_dates = pd.date_range(
-        start=df['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
+        start=df_bandara['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
         periods=future_months,
         freq='MS'
     )
 
     # Tampilkan hasil
     fig2 = plt.figure(figsize=(12, 6))
-    plt.plot(df['Tahun-Bulan'], df['Jumlah_Wisatawan'], label='Data Historis', color='blue')
+    plt.plot(df_bandara['Tahun-Bulan'], df_bandara['Jumlah_Wisatawan'], label='Data Historis', color='blue')
     plt.plot(pred_dates, predictions, label='Prediksi', color='red', marker='o')
 
     # Anotasi nilai prediksi
