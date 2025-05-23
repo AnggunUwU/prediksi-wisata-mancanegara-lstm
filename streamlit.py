@@ -6,7 +6,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_absolute_error
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Konfigurasi Aplikasi
 st.set_page_config(page_title="📅 Prediksi Wisatawan - LSTM", layout="wide")
@@ -17,7 +17,7 @@ st.title('📅 Prediksi Jumlah Wisatawan per Pintu Masuk')
 # ======================================
 @st.cache_data
 def load_data():
-    url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/raw/main/data.xlsx"
+    url = "https://raw.githubusercontent.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/main/data.xlsx"
     df = pd.read_excel(url)
     df['Tahun-Bulan'] = pd.to_datetime(df['Tahun-Bulan'])
     return df
