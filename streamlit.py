@@ -31,6 +31,17 @@ selected_pintu = st.selectbox("Pilih Pintu Masuk", pintu_masuk)
 # Filter Data
 df_filtered = df[df['Pintu Masuk'] == selected_pintu].sort_values('Tahun-Bulan')
 
+# Mengubah format data dari bentuk lebar (wide) ke panjang (long)
+df = df.melt(id_vars=['Pintu Masuk', 'Tahun'],
+                  value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+                              'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                  var_name='Bulan', value_name='Jumlah_Wisatawan')
+bulan_mapping = {"Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+                 "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12}
+df['Bulan'] = df['Bulan'].map(bulan_mapping)
+# Mengonversi kolom 'Tahun' ke string, lalu menggabungkan dengan kolom 'Bulan'
+df['Tahun-Bulan'] = pd.to_datetime(df['Tahun'].astype(str) + '-' + df['Bulan'].astype(str) + '-01')
+
 # Validasi Data
 if len(df_filtered) < 24:
     st.error(f"⚠️ Data historis untuk {selected_pintu} hanya {len(df_filtered)} bulan, minimal 24 bulan")
