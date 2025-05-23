@@ -82,14 +82,6 @@ epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
 future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", 
                                       min_value=1, max_value=36, value=12)
 
-# Tombol untuk memulai prediksi
-start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
-
-# Jika tombol belum ditekan, tampilkan pesan dan berhenti
-if not start_prediction:
-    st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
-    st.stop()
-
 # ======================================
 # 3. Preprocessing Data
 # ======================================
@@ -148,9 +140,12 @@ def calculate_metrics(actual, predicted):
     return mae, mape
 
 try:
+    train_pred = scaler.inverse_transform(model.predict(X_train))
     test_pred = scaler.inverse_transform(model.predict(X_test))
+    y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
     
+    train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
     test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
 except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
@@ -158,10 +153,13 @@ except Exception as e:
 
 # Tampilkan metrik
 st.subheader("📊 Evaluasi Model")
-col1, col2 = st.columns(2)
-col1.metric("Test MAE", f"{test_mae:,.0f}")
-col2.metric("Test MAPE", f"{test_mape:.1f}%", 
+col1, col2, col3 = st.columns(3)
+col1.metric("Train MAE", f"{train_mae:,.0f}")
+col2.metric("Test MAE", f"{test_mae:,.0f}", 
+           delta=f"{(test_mae-train_mae)/train_mae*100:.1f}% vs Train" if train_mae != 0 else "N/A")
+col3.metric("Test MAPE", f"{test_mape:.1f}%", 
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
+
 # ======================================
 # 6. Visualisasi Hasil
 # ======================================
