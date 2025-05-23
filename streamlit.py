@@ -147,9 +147,7 @@ def calculate_metrics(actual, predicted):
     return mae, mape
 
 try:
-    train_pred = scaler.inverse_transform(model.predict(X_train))
     test_pred = scaler.inverse_transform(model.predict(X_test))
-    y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
    
     test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
@@ -157,13 +155,12 @@ except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
 
-# Tampilkan metrik
+# Tampilkan metrik - Hanya Test MAE dan Test MAPE
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
-col1.metric("Test MAE", f"{test_mae:,.0f}"
+col1.metric("Test MAE", f"{test_mae:,.0f}")
 col2.metric("Test MAPE", f"{test_mape:.1f}%", 
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
-
 # ======================================
 # 6. Visualisasi Hasil - BAGIAN YANG DIPERBAIKI
 # ======================================
