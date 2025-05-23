@@ -2,178 +2,219 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_absolute_error
-from datetime import datetime
-import plotly.express as px
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+import requests
+from io import BytesIO
 
-# Konfigurasi Aplikasi
-st.set_page_config(page_title="📅 Prediksi Wisatawan - LSTM", layout="wide")
-st.title('📅 Prediksi Jumlah Wisatawan dengan LSTM')
+# Judul aplikasi
+st.title('Prediksi Kedatangan Wisatawan Mancanegara dengan LSTM')
 
-# ======================================
 # 1. Load Data dari GitHub
-# ======================================
-url = "https://raw.githubusercontent.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/main/data.xlsx"
-
-try:
-    df = pd.read_excel(url, engine='openpyxl')
-    df['Tahun-Bulan'] = pd.to_datetime(df['Tahun-Bulan'])
-    df = df.sort_values('Tahun-Bulan')
+@st.cache_data
+def load_data():
+    url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/raw/main/data.xlsx"
+    response = requests.get(url)
+    excel_data = pd.ExcelFile(BytesIO(response.content))
     
-    # Validasi kolom
-    required_columns = ['pintu Masuk', 'Jumlah_Wisatawan', 'Tahun-Bulan']
-    if not all(col in df.columns for col in required_columns):
-        st.error(f"Kolom yang diperlukan tidak ditemukan. Pastikan file memiliki kolom: {required_columns}")
-        st.stop()
-except Exception as e:
-    st.error(f"Terjadi kesalahan saat memuat data: {str(e)}")
-    st.stop()
+    # Baca semua sheet dan gabungkan
+    all_data = pd.DataFrame()
+    for sheet_name in excel_data.sheet_names:
+        if sheet_name.startswith('Sheet'):
+            df = pd.read_excel(excel_data, sheet_name=sheet_name)
+            # Ekstrak tahun dari sheet name atau kolom
+            if 'Tahun' in df.columns:
+                all_data = pd.concat([all_data, df], ignore_index=True)
+    
+    # Bersihkan data
+    all_data = all_data.dropna(subset=['Pintu Masuk'])
+    all_data = all_data[all_data['Pintu Masuk'] != 'Pintu Masuk']  # Hapus baris header yang terduplikat
+    
+    # Ubah ke format long
+    df_long = all_data.melt(id_vars=['Pintu Masuk', 'Tahun'], 
+                          value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                                     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                          var_name='Bulan', value_name='Jumlah_Wisatawan')
+    
+    bulan_mapping = {"Januari":1, "Februari":2, "Maret":3, "April":4, "Mei":5, "Juni":6,
+                     "Juli":7, "Agustus":8, "September":9, "Oktober":10, "November":11, "Desember":12}
+    df_long['Bulan'] = df_long['Bulan'].map(bulan_mapping)
+    df_long['Tahun-Bulan'] = pd.to_datetime(df_long['Tahun'].astype(str) + '-' + df_long['Bulan'].astype(str) + '-01')
+    df_long = df_long.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
+    
+    return df_long
 
-# Tampilkan data
-with st.expander("🔍 Lihat Data Historis"):
-    st.dataframe(df, height=200)
+df = load_data()
 
-# ======================================
-# 2. Pilih Bandara untuk Prediksi
-# ======================================
-bandara_list = df['pintu Masuk'].unique()
-bandara = st.selectbox("Pilih Bandara untuk Prediksi", bandara_list)
+# 2. Pilih Bandara
+st.sidebar.header("Pengaturan Prediksi")
+all_airports = df['Pintu Masuk'].unique()
+selected_airport = st.sidebar.selectbox("Pilih Bandara/Pintu Masuk:", all_airports)
 
 # Filter data berdasarkan bandara yang dipilih
-df_bandara = df[df['pintu Masuk'] == bandara]
+airport_data = df[df['Pintu Masuk'] == selected_airport].copy()
 
-# ======================================
-# 3. Panel Kontrol
-# ======================================
-st.sidebar.header("⚙️ Parameter Model")
-time_steps = st.sidebar.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
-epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
-future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", min_value=1, max_value=36, value=12)
-
-# ======================================
-# 4. Preprocessing Data
-# ======================================
+# 3. Preprocessing
 scaler = RobustScaler()
-data_scaled = scaler.fit_transform(df_bandara['Jumlah_Wisatawan'].values.reshape(-1, 1))
+data_scaled = scaler.fit_transform(airport_data[['Jumlah_Wisatawan']])
 
-def create_dataset(data, steps):
+def create_dataset(data, time_steps=12):
     X, y = [], []
-    for i in range(len(data)-steps):
-        X.append(data[i:(i+steps), 0])
-        y.append(data[i+steps, 0])
+    for i in range(len(data)-time_steps):
+        X.append(data[i:(i+time_steps), 0])
+        y.append(data[i+time_steps, 0])
     return np.array(X), np.array(y)
 
-X, y = create_dataset(data_scaled, time_steps)
+X, y = create_dataset(data_scaled, time_steps=12)
 X = X.reshape(X.shape[0], X.shape[1], 1)
 
-# ======================================
-# 5. Training Model
-# ======================================
+# 4. Split Data
 split = int(0.8 * len(X))
 X_train, X_test = X[:split], X[split:]
 y_train, y_test = y[:split], y[split:]
 
-model = Sequential([
-    LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
-    LSTM(32, activation='tanh'),
-    Dense(1)
-])
-model.compile(optimizer='adam', loss='mse')
+# 5. Bangun dan Latih Model
+@st.cache_resource
+def build_and_train_model(_X_train, _y_train, _X_test, _y_test):
+    model = Sequential([
+        LSTM(64, activation='relu', input_shape=(12, 1), return_sequences=True),
+        LSTM(32, activation='relu'),
+        Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(_X_train, _y_train, epochs=80, batch_size=32, 
+              validation_data=(_X_test, _y_test), verbose=0)
+    return model
 
-with st.spinner(f'Melatih model dengan {epochs} epoch...'):
-    history = model.fit(X_train, y_train,
-                        epochs=epochs,
-                        validation_data=(X_test, y_test),
-                        callbacks=[early_stop],
-                        verbose=0)
+model = build_and_train_model(X_train, y_train, X_test, y_test)
 
-# ======================================
-# 6. Evaluasi Model
-# ======================================
-def calculate_metrics(actual, predicted):
-    mae = mean_absolute_error(actual, predicted)
-    mape = np.mean(np.abs((actual - predicted) / actual)) * 100
-    return mae, mape
+# 6. Prediksi
+train_predict = model.predict(X_train)
+test_predict = model.predict(X_test)
 
-train_pred = scaler.inverse_transform(model.predict(X_train))
-test_pred = scaler.inverse_transform(model.predict(X_test))
+# Inverse Scaling
+train_predict = scaler.inverse_transform(train_predict)
+y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
+test_predict = scaler.inverse_transform(test_predict)
+y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
 
-train_mae, train_mape = calculate_metrics(scaler.inverse_transform(y_train.reshape(-1, 1)), train_pred)
-test_mae, test_mape = calculate_metrics(scaler.inverse_transform(y_test.reshape(-1, 1)), test_pred)
+# 7. Evaluasi
+def calculate_mape(actual, predicted):
+    non_zero_indices = actual != 0
+    actual_non_zero = actual[non_zero_indices]
+    predicted_non_zero = predicted[non_zero_indices]
+    return np.mean(np.abs((actual_non_zero - predicted_non_zero) / actual_non_zero)) * 100
 
-# Tampilkan metrik
-st.subheader("📊 Evaluasi Model")
-col1, col2, col3 = st.columns(3)
-col1.metric("Train MAE", f"{train_mae:,.0f}")
-col2.metric("Test MAE", f"{test_mae:,.0f}", delta=f"{(test_mae-train_mae)/train_mae*100:.1f}% vs Train")
-col3.metric("Test MAPE", f"{test_mape:.1f}%", "Baik" if test_mape < 10 else "Cukup")
+train_mae = mean_absolute_error(y_train_actual, train_predict)
+test_mae = mean_absolute_error(y_test_actual, test_predict)
+train_mape = calculate_mape(y_train_actual, train_predict)
+test_mape = calculate_mape(y_test_actual, test_predict)
 
-# ======================================
-# 7. Visualisasi Hasil
-# ======================================
-st.subheader("📈 Grafik Hasil")
+# 8. Prediksi 6 Bulan ke Depan
+def predict_next_six_months(_model, initial_input):
+    predictions = []
+    current_input = initial_input.copy()
+    
+    for _ in range(6):
+        next_pred_scaled = _model.predict(current_input, verbose=0)
+        next_pred = scaler.inverse_transform(next_pred_scaled)[0][0]
+        predictions.append(next_pred)
+        current_input = np.append(current_input[:, 1:, :], next_pred_scaled.reshape(1, 1, 1), axis=1)
+    
+    return predictions
 
-# Prediksi masa depan
-last_sequence = data_scaled[-time_steps:]
-predictions = []
+last_12_months = airport_data['Jumlah_Wisatawan'].values[-12:].reshape(1, -1, 1)
+last_12_months_scaled = scaler.transform(last_12_months.reshape(-1, 1)).reshape(1, 12, 1)
+monthly_predictions = predict_next_six_months(model, last_12_months_scaled)
 
-for _ in range(future_months):
-    next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
-    predictions.append(next_pred[0,0])
-    last_sequence = np.append(last_sequence[1:], next_pred)
-
-predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+# Generate tanggal prediksi
+last_date = airport_data['Tahun-Bulan'].iloc[-1]
 pred_dates = pd.date_range(
-    start=df_bandara['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
-    periods=future_months,
+    start=last_date + pd.DateOffset(months=1),
+    periods=6,
     freq='MS'
 )
 
-# Gabungkan data aktual dan prediksi
-df_actual = df_bandara[['Tahun-Bulan', 'Jumlah_Wisatawan']].copy()
-df_actual['Type'] = 'Aktual'
+# Timeline untuk plotting
+train_dates = airport_data['Tahun-Bulan'].iloc[12 : split+12]
+test_dates = airport_data['Tahun-Bulan'].iloc[split+12 : split+12+len(test_predict)]
 
-df_pred = pd.DataFrame({
-    'Tahun-Bulan': pred_dates,
-    'Jumlah_Wisatawan': predictions.flatten(),
-    'Type': 'Prediksi'
-})
+# 9. Visualisasi di Streamlit
+st.header(f'Prediksi untuk {selected_airport}')
 
-df_combined = pd.concat([df_actual, df_pred])
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Total Data Points", len(airport_data))
+with col2:
+    st.metric("Data Terakhir", airport_data['Tahun-Bulan'].iloc[-1].strftime('%B %Y'))
 
-# Grafik interaktif dengan Plotly
-fig = px.line(df_combined, x='Tahun-Bulan', y='Jumlah_Wisatawan', 
-              color='Type', title=f'Prediksi Wisatawan untuk {bandara}',
-              labels={'Jumlah_Wisatawan': 'Jumlah Wisatawan', 'Tahun-Bulan': 'Tanggal'},
-              hover_data={'Jumlah_Wisatawan': ':,.0f'})
+fig, ax = plt.subplots(figsize=(12, 6))
 
-fig.update_traces(mode='lines+markers')
-fig.update_layout(hovermode='x unified')
-st.plotly_chart(fig, use_container_width=True)
+# Plot data aktual
+ax.plot(airport_data['Tahun-Bulan'], airport_data['Jumlah_Wisatawan'], 
+        label='Data Aktual', color='#1f77b4', linewidth=2)
 
-# Tabel hasil
+# Plot prediksi training
+ax.plot(train_dates, train_predict, 
+        label='Prediksi Training', linestyle='--', color='#ff7f0e')
+
+# Plot prediksi testing
+ax.plot(test_dates, test_predict, 
+        label='Prediksi Testing', linestyle='--', color='#2ca02c')
+
+# Plot prediksi 6 bulan ke depan
+ax.plot(pred_dates, monthly_predictions, 
+        label='Prediksi Masa Depan', color='red', marker='o', linestyle=':', linewidth=2)
+
+# Anotasi nilai prediksi
+for date, pred in zip(pred_dates, monthly_predictions):
+    ax.annotate(f"{int(pred):,}", (date, pred), 
+                textcoords="offset points", xytext=(0,10), ha='center')
+
+# Format plot
+ax.set_title(f'Prediksi Kedatangan Wisatawan di {selected_airport}')
+ax.set_xlabel('Tahun-Bulan')
+ax.set_ylabel('Jumlah Wisatawan')
+ax.legend()
+ax.grid(True, linestyle='--', alpha=0.7)
+plt.xticks(rotation=45)
+plt.tight_layout()
+
+st.pyplot(fig)
+
+# Tampilkan metrik evaluasi
+st.subheader('Evaluasi Model')
+col1, col2 = st.columns(2)
+col1.metric("MAE (Training)", f"{train_mae:,.2f}")
+col2.metric("MAPE (Training)", f"{train_mape:.2f}%")
+
+col1, col2 = st.columns(2)
+col1.metric("MAE (Testing)", f"{test_mae:,.2f}")
+col2.metric("MAPE (Testing)", f"{test_mape:.2f}%")
+
+# Tampilkan prediksi 6 bulan ke depan
+st.subheader('Prediksi 6 Bulan Ke Depan')
+months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni']
 pred_df = pd.DataFrame({
-    'Bulan': pred_dates.strftime('%B %Y'),
-    'Prediksi': predictions.flatten().astype(int),
-    'Perubahan (%)': np.insert(np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100, 0, 0)
+    'Bulan': months,
+    'Tahun': pred_dates.year,
+    'Prediksi': monthly_predictions
 })
 
-st.dataframe(
-    pred_df.style.format({
-        'Prediksi': '{:,.0f}',
-        'Perubahan (%)': '{:.1f}%'
-    }).highlight_max(axis=0),
-    height=400
-)
+st.dataframe(pred_df.style.format({'Prediksi': '{:,.0f}'}))
 
-# Ekspor hasil
+# Download hasil prediksi
 csv = pred_df.to_csv(index=False).encode('utf-8')
 st.download_button(
-    label="📥 Download Prediksi (CSV)",
+    label="Download Prediksi sebagai CSV",
     data=csv,
-    file_name=f"prediksi_wisatawan_{bandara}_{datetime.now().strftime('%Y%m%d')}.csv",
+    file_name=f'prediksi_{selected_airport.replace(" ", "_")}.csv',
     mime='text/csv'
 )
+
+# Tampilkan data historis
+if st.checkbox("Tampilkan Data Historis"):
+    st.subheader(f'Data Historis {selected_airport}')
+    st.dataframe(airport_data.sort_values('Tahun-Bulan', ascending=False))
