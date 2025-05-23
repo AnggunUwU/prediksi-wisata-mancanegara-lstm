@@ -85,10 +85,10 @@ future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?",
 # Tombol untuk memulai prediksi
 start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
 
-# Jika tombol belum ditekan, tampilkan pesan dan berhenti
 if not start_prediction:
     st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
     st.stop()
+
 # ======================================
 # 3. Preprocessing Data
 # ======================================
@@ -168,7 +168,7 @@ col3.metric("Test MAPE", f"{test_mape:.1f}%",
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
 
 # ======================================
-# 6. Visualisasi Hasil
+# 6. Visualisasi Hasil - BAGIAN YANG DIPERBAIKI
 # ======================================
 st.subheader("📈 Grafik Hasil")
 
@@ -192,16 +192,27 @@ try:
         st.pyplot(fig1)
 
     with tab2:
-        # Prediksi masa depan
+        # Prediksi masa depan - PERBAIKAN UTAMA DI SINI
         last_sequence = data_scaled[-time_steps:]
         predictions = []
 
         for _ in range(future_months):
             next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
             predictions.append(next_pred[0,0])
-            last_sequence = np.append(last_sequence[1:], next_pred)
+            # Perbaikan: Pastikan sequence tetap memiliki panjang time_steps
+            last_sequence = np.append(last_sequence[1:], next_pred)[-time_steps:]
 
         predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        
+        # Debugging: Tampilkan jumlah prediksi
+        st.write(f"Jumlah prediksi yang dihasilkan: {len(predictions)} (diminta: {future_months})")
+        
+        # Pastikan jumlah prediksi sesuai dengan yang diminta
+        if len(predictions) != future_months:
+            st.error(f"Jumlah prediksi ({len(predictions)}) tidak sesuai dengan yang diminta ({future_months})")
+            st.stop()
+        
+        # Buat tanggal prediksi
         pred_dates = pd.date_range(
             start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
             periods=future_months,
@@ -210,50 +221,4 @@ try:
 
         # Plot prediksi
         fig2, ax2 = plt.subplots(figsize=(12, 6))
-        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'], 
-                label='Data Historis', color='blue')
-        ax2.plot(pred_dates, predictions, 
-                label='Prediksi', color='red', marker='o')
-        
-        # Anotasi nilai prediksi
-        for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            if i % max(1, future_months//6) == 0 or i == len(pred_dates)-1:
-                ax2.text(date, pred[0], f"{int(pred[0]):,}", 
-                         ha='center', va='bottom', fontsize=9)
-
-        ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
-        ax2.legend()
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig2)
-
-        # Tabel hasil
-        pred_df = pd.DataFrame({
-            'Bulan': pred_dates.strftime('%B %Y'),
-            'Prediksi': predictions.flatten().astype(int),
-            'Perubahan (%)': np.round(
-                np.insert(
-                    np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100, 
-                0, 0
-            ), 1)
-        })
-
-        st.dataframe(
-            pred_df.style.format({
-                'Prediksi': '{:,.0f}',
-                'Perubahan (%)': '{:.1f}%'
-            }).background_gradient(cmap='Blues', subset=['Perubahan (%)']),
-            height=min(400, 35*future_months),
-            use_container_width=True
-        )
-
-        # Ekspor hasil
-        csv = pred_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Prediksi (CSV)",
-            data=csv,
-            file_name=f"prediksi_{selected_pintu.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime='text/csv'
-        )
-
-except Exception as e:
-    st.error(f"Error dalam visualisasi: {str(e)}")
+        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wis
