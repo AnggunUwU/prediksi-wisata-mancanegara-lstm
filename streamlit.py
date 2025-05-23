@@ -53,6 +53,12 @@ st.sidebar.header("Pengaturan Prediksi")
 all_airports = df['Pintu Masuk'].unique()
 selected_airport = st.sidebar.selectbox("Pilih Bandara/Pintu Masuk:", all_airports)
 
+# Input untuk epoch, batch size, lookback, dan target prediksi
+epochs = st.sidebar.number_input("Jumlah Epoch:", min_value=1, value=80, step=1)
+batch_size = st.sidebar.number_input("Ukuran Batch:", min_value=1, value=32, step=1)
+lookback = st.sidebar.number_input("Lookback (Langkah Waktu):", min_value=1, value=12, step=1)
+target_months = st.sidebar.number_input("Target Bulan untuk Prediksi:", min_value=1, value=6, step=1)
+
 # Filter data berdasarkan bandara yang dipilih
 airport_data = df[df['Pintu Masuk'] == selected_airport].copy()
 
@@ -60,14 +66,14 @@ airport_data = df[df['Pintu Masuk'] == selected_airport].copy()
 scaler = RobustScaler()
 data_scaled = scaler.fit_transform(airport_data[['Jumlah_Wisatawan']])
 
-def create_dataset(data, time_steps=12):
+def create_dataset(data, time_steps=lookback):
     X, y = [], []
     for i in range(len(data)-time_steps):
         X.append(data[i:(i+time_steps), 0])
         y.append(data[i+time_steps, 0])
     return np.array(X), np.array(y)
 
-X, y = create_dataset(data_scaled, time_steps=12)
+X, y = create_dataset(data_scaled, time_steps=lookback)
 X = X.reshape(X.shape[0], X.shape[1], 1)
 
 # 4. Split Data
@@ -79,45 +85,23 @@ y_train, y_test = y[:split], y[split:]
 @st.cache_resource
 def build_and_train_model(_X_train, _y_train, _X_test, _y_test):
     model = Sequential([
-        LSTM(64, activation='relu', input_shape=(12, 1), return_sequences=True),
+        LSTM(64, activation='relu', input_shape=(lookback, 1), return_sequences=True),
         LSTM(32, activation='relu'),
         Dense(1)
     ])
     model.compile(optimizer='adam', loss='mse')
-    model.fit(_X_train, _y_train, epochs=80, batch_size=32, 
+    model.fit(_X_train, _y_train, epochs=epochs, batch_size=batch_size, 
               validation_data=(_X_test, _y_test), verbose=0)
     return model
 
 model = build_and_train_model(X_train, y_train, X_test, y_test)
 
-# 6. Prediksi
-train_predict = model.predict(X_train)
-test_predict = model.predict(X_test)
-
-# Inverse Scaling
-train_predict = scaler.inverse_transform(train_predict)
-y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
-test_predict = scaler.inverse_transform(test_predict)
-y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-
-# 7. Evaluasi
-def calculate_mape(actual, predicted):
-    non_zero_indices = actual != 0
-    actual_non_zero = actual[non_zero_indices]
-    predicted_non_zero = predicted[non_zero_indices]
-    return np.mean(np.abs((actual_non_zero - predicted_non_zero) / actual_non_zero)) * 100
-
-train_mae = mean_absolute_error(y_train_actual, train_predict)
-test_mae = mean_absolute_error(y_test_actual, test_predict)
-train_mape = calculate_mape(y_train_actual, train_predict)
-test_mape = calculate_mape(y_test_actual, test_predict)
-
-# 8. Prediksi 6 Bulan ke Depan
-def predict_next_six_months(_model, initial_input):
+# 8. Prediksi N Bulan ke Depan
+def predict_next_n_months(_model, initial_input, n_months):
     predictions = []
     current_input = initial_input.copy()
     
-    for _ in range(6):
+    for _ in range(n_months):
         next_pred_scaled = _model.predict(current_input, verbose=0)
         next_pred = scaler.inverse_transform(next_pred_scaled)[0][0]
         predictions.append(next_pred)
@@ -125,15 +109,15 @@ def predict_next_six_months(_model, initial_input):
     
     return predictions
 
-last_12_months = airport_data['Jumlah_Wisatawan'].values[-12:].reshape(1, -1, 1)
-last_12_months_scaled = scaler.transform(last_12_months.reshape(-1, 1)).reshape(1, 12, 1)
-monthly_predictions = predict_next_six_months(model, last_12_months_scaled)
+last_12_months = airport_data['Jumlah_Wisatawan'].values[-lookback:].reshape(1, -1, 1)
+last_12_months_scaled = scaler.transform(last_12_months.reshape(-1, 1)).reshape(1, lookback, 1)
+monthly_predictions = predict_next_n_months(model, last_12_months_scaled, target_months)
 
 # Generate tanggal prediksi
 last_date = airport_data['Tahun-Bulan'].iloc[-1]
 pred_dates = pd.date_range(
     start=last_date + pd.DateOffset(months=1),
-    periods=6,
+    periods=target_months,
     freq='MS'
 )
 
