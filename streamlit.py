@@ -92,16 +92,16 @@ if not start_prediction:
 scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
-def create_dataset(data, steps):
+def create_dataset(data, time_steps):
     X, y = [], []
-    for i in range(len(data)-steps):
-        X.append(data[i:(i+steps), 0])
-        y.append(data[i+steps, 0])
+    for i in range(len(data)-time_steps):
+        X.append(data[i:(i+time_steps), 0])
+        y.append(data[i+time_steps, 0])
     return np.array(X), np.array(y)
 
 try:
-    X, y = create_dataset(data_scaled, time_steps)
-    X = X.reshape(X.shape[0], X.shape[1], 1)
+X, y = create_dataset(data_scaled, time_steps=12)
+X = X.reshape(X.shape[0], X.shape[1], 1)
 except Exception as e:
     st.error(f"Error dalam preprocessing data: {str(e)}")
     st.stop()
