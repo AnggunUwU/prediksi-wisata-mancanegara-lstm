@@ -88,11 +88,8 @@ start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
 if not start_prediction:
     st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
     st.stop()
-
-# ======================================
-# 3. Preprocessing Data
-# ======================================
-scaler = RobustScaler()
+    
+scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
 def create_dataset(data, steps):
