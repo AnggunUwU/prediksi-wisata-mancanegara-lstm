@@ -18,21 +18,21 @@ st.title('📅 Prediksi Jumlah Wisatawan per Pintu Masuk')
 @st.cache_data
 def load_data():
     url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/raw/main/data.xlsx"
-
+    
     try:
         # Baca semua sheet dan gabungkan
         all_sheets = pd.read_excel(url, sheet_name=None)
         df = pd.concat(all_sheets.values(), ignore_index=True)
-
+        
         # Bersihkan data
         df = df.dropna(subset=['Pintu Masuk'])
         df = df[df['Pintu Masuk'] != 'Pintu Masuk']  # Hapus baris header yang terduplikat
-
+        
         # Ubah ke format long jika diperlukan
         if 'Januari' in df.columns:  # Jika masih format wide
             df = df.melt(
                 id_vars=['Pintu Masuk', 'Tahun'],
-                value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
                            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
                 var_name='Bulan',
                 value_name='Jumlah_Wisatawan'
@@ -45,9 +45,9 @@ def load_data():
             df['Tahun-Bulan'] = pd.to_datetime(
                 df['Tahun'].astype(str) + '-' + df['Bulan'].astype(str) + '-01'
             )
-
+        
         return df.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
-
+    
     except Exception as e:
         st.error(f"Gagal memuat data: {str(e)}")
         return pd.DataFrame()
@@ -79,8 +79,15 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
 st.sidebar.header("⚙️ Parameter Model")
 time_steps = st.sidebar.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
 epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
-future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?",
+future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", 
                                       min_value=1, max_value=36, value=12)
+
+# Tombol untuk memulai prediksi
+start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
+
+if not start_prediction:
+    st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
+    st.stop()
 
 # ======================================
 # 3. Preprocessing Data
@@ -144,7 +151,7 @@ try:
     test_pred = scaler.inverse_transform(model.predict(X_test))
     y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-
+    
     train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
     test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
 except Exception as e:
@@ -155,13 +162,13 @@ except Exception as e:
 st.subheader("📊 Evaluasi Model")
 col1, col2, col3 = st.columns(3)
 col1.metric("Train MAE", f"{train_mae:,.0f}")
-col2.metric("Test MAE", f"{test_mae:,.0f}",
+col2.metric("Test MAE", f"{test_mae:,.0f}", 
            delta=f"{(test_mae-train_mae)/train_mae*100:.1f}% vs Train" if train_mae != 0 else "N/A")
-col3.metric("Test MAPE", f"{test_mape:.1f}%",
+col3.metric("Test MAPE", f"{test_mape:.1f}%", 
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
 
 # ======================================
-# 6. Visualisasi Hasil
+# 6. Visualisasi Hasil - BAGIAN YANG DIPERBAIKI
 # ======================================
 st.subheader("📈 Grafik Hasil")
 
@@ -171,13 +178,13 @@ try:
 
     with tab1:
         fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
+        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
                 y_train_actual, label='Train Aktual', color='blue')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
+        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
                 y_test_actual, label='Test Aktual', color='green')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
+        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
                 train_pred, label='Prediksi Train', linestyle='--', color='red')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
+        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
                 test_pred, label='Prediksi Test', linestyle='--', color='orange')
         ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
         ax1.legend()
@@ -185,16 +192,27 @@ try:
         st.pyplot(fig1)
 
     with tab2:
-        # Prediksi masa depan
+        # Prediksi masa depan - PERBAIKAN UTAMA DI SINI
         last_sequence = data_scaled[-time_steps:]
         predictions = []
 
         for _ in range(future_months):
             next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
             predictions.append(next_pred[0,0])
-            last_sequence = np.append(last_sequence[1:], next_pred)
+            # Perbaikan: Pastikan sequence tetap memiliki panjang time_steps
+            last_sequence = np.append(last_sequence[1:], next_pred)[-time_steps:]
 
         predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        
+        # Debugging: Tampilkan jumlah prediksi
+        st.write(f"Jumlah prediksi yang dihasilkan: {len(predictions)} (diminta: {future_months})")
+        
+        # Pastikan jumlah prediksi sesuai dengan yang diminta
+        if len(predictions) != future_months:
+            st.error(f"Jumlah prediksi ({len(predictions)}) tidak sesuai dengan yang diminta ({future_months})")
+            st.stop()
+        
+        # Buat tanggal prediksi
         pred_dates = pd.date_range(
             start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
             periods=future_months,
@@ -203,29 +221,28 @@ try:
 
         # Plot prediksi
         fig2, ax2 = plt.subplots(figsize=(12, 6))
-        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'],
+        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'], 
                 label='Data Historis', color='blue')
-        ax2.plot(pred_dates, predictions,
+        ax2.plot(pred_dates, predictions, 
                 label='Prediksi', color='red', marker='o')
-
-        # Anotasi nilai prediksi
+        
+        # Anotasi nilai prediksi - tampilkan semua bulan
         for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            if i % max(1, future_months//6) == 0 or i == len(pred_dates)-1:
-                ax2.text(date, pred[0], f"{int(pred[0]):,}",
-                         ha='center', va='bottom', fontsize=9)
+            ax2.text(date, pred[0], f"{int(pred[0]):,}", 
+                     ha='center', va='bottom', fontsize=9)
 
         ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
         ax2.legend()
         ax2.grid(True, linestyle='--', alpha=0.7)
         st.pyplot(fig2)
 
-        # Tabel hasil
+        # Tabel hasil - tampilkan semua bulan
         pred_df = pd.DataFrame({
             'Bulan': pred_dates.strftime('%B %Y'),
             'Prediksi': predictions.flatten().astype(int),
             'Perubahan (%)': np.round(
                 np.insert(
-                    np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100,
+                    np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100, 
                 0, 0
             ), 1)
         })
