@@ -153,7 +153,12 @@ try:
     y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
     
+    train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
     test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
+except Exception as e:
+    st.error(f"Error dalam evaluasi model: {str(e)}")
+    st.stop()
+
 except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
