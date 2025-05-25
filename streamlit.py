@@ -74,19 +74,28 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
     st.dataframe(df_filtered, height=200)
 
 # ======================================
-# 2. Panel Kontrol
+# 2. Panel Kontrol - Dipindahkan ke Main Content
 # ======================================
-st.sidebar.header("⚙️ Parameter Model")
-time_steps = st.sidebar.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
-epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
-future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", 
-                                      min_value=1, max_value=36, value=12)
+st.subheader("⚙️ Parameter Model")
 
-# Tombol untuk memulai prediksi
-start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
+# Buat columns untuk layout parameter
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    time_steps = st.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
+
+with col2:
+    epochs = st.slider("Jumlah Epoch", 50, 300, 100)
+
+with col3:
+    future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", 
+                                  min_value=1, max_value=36, value=12)
+
+# Tombol untuk memulai prediksi - dipindahkan ke bawah parameter
+start_prediction = st.button("🚀 Mulai Prediksi", type="primary")
 
 if not start_prediction:
-    st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
+    st.info("Silakan atur parameter di atas dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
     st.stop()
 
 # ======================================
