@@ -110,11 +110,14 @@ except Exception as e:
     st.stop()
 
 # ======================================
-# 4. Training Model
+# 4. Training Model - Perbaikan Split Timeline
 # ======================================
-split = int(0.8 * len(X))
-X_train, X_test = X[:split], X[split:]
-y_train, y_test = y[:split], y[split:]
+# Hitung split point berdasarkan timeline
+split_date = df_filtered['Tahun-Bulan'].iloc[int(0.8 * len(df_filtered))]
+split_idx = len(df_filtered[df_filtered['Tahun-Bulan'] <= split_date]) - time_steps
+
+X_train, X_test = X[:split_idx], X[split_idx:]
+y_train, y_test = y[:split_idx], y[split_idx:]
 
 model = Sequential([
     LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
@@ -177,19 +180,30 @@ try:
     tab1, tab2 = st.tabs(["Training vs Test", "Prediksi Masa Depan"])
 
     with tab1:
-        fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
-                y_train_actual, label='Train Aktual', color='blue')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
-                y_test_actual, label='Test Aktual', color='green')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
-                train_pred, label='Prediksi Train', linestyle='--', color='red')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
-                test_pred, label='Prediksi Test', linestyle='--', color='orange')
-        ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
-        ax1.legend()
-        ax1.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig1)
+    fig1, ax1 = plt.subplots(figsize=(12, 6))
+    
+    # Hitung indeks yang benar untuk plotting
+    train_start_idx = time_steps
+    train_end_idx = train_start_idx + len(X_train)
+    test_end_idx = train_end_idx + len(X_test)
+    
+    # Dapatkan tanggal yang sesuai
+    train_dates = df_filtered['Tahun-Bulan'].iloc[train_start_idx:train_end_idx]
+    test_dates = df_filtered['Tahun-Bulan'].iloc[train_end_idx:test_end_idx]
+    
+    ax1.plot(train_dates, y_train_actual, label='Train Aktual', color='blue')
+    ax1.plot(test_dates, y_test_actual, label='Test Aktual', color='green')
+    ax1.plot(train_dates, train_pred, label='Prediksi Train', linestyle='--', color='red')
+    ax1.plot(test_dates, test_pred, label='Prediksi Test', linestyle='--', color='orange')
+    
+    # Tambahkan garis pemisah
+    if len(test_dates) > 0:
+        ax1.axvline(x=test_dates.iloc[0], color='gray', linestyle=':', label='Pemisah Train-Test')
+    
+    ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
+    ax1.legend()
+    ax1.grid(True, linestyle='--', alpha=0.7)
+    st.pyplot(fig1)
 
     with tab2:
         # Prediksi masa depan - PERBAIKAN UTAMA DI SINI
