@@ -158,6 +158,7 @@ except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
 
+
 # Tampilkan metrik
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
