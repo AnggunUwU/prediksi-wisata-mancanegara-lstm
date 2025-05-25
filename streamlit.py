@@ -167,7 +167,7 @@ except Exception as e:
 # Tampilkan metrik
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
-col1.metric("TTest MAE", f"{test_mae:,.0f}", 
+col1.metric("Test MAE", f"{test_mae:,.0f}", 
            delta=f"{(test_mae-train_mae)/train_mae*100:.1f}% vs Train" if train_mae != 0 else "N/A")
             
 col2.metric("Test MAPE", f"{test_mape:.1f}%", 
