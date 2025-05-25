@@ -92,7 +92,7 @@ if not start_prediction:
 # ======================================
 # 3. Preprocessing Data
 # ======================================
-# 2. Normalisasi
+
 scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
@@ -167,10 +167,11 @@ except Exception as e:
 # Tampilkan metrik
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
+
 col1.metric("Test MAE", f"{test_mae:,.0f}")
+
 col2.metric("Test MAPE", f"{test_mape:.1f}%", 
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
-
 # ======================================
 # 6. Visualisasi Hasil 
 # ======================================
