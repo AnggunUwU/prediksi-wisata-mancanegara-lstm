@@ -2,18 +2,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
 # Konfigurasi Aplikasi
-st.set_page_config(page_title="📅 Prediksi Wisatawan - LSTM", layout="wide")
-st.title('📅 Prediksi Jumlah Wisatawan per Pintu Masuk')
+st.set_page_config(page_title="📊 Analisis Wisatawan Mancanegara", layout="wide")
+st.title('📊 Analisis Data Wisatawan Mancanegara')
 
 # ======================================
-# 1. Load dan Persiapkan Data
+# 1. Load Data
 # ======================================
 @st.cache_data
 def load_data():
@@ -57,228 +53,111 @@ df = load_data()
 if df.empty:
     st.stop()
 
-# Pilih Pintu Masuk
-pintu_masuk = df['Pintu Masuk'].unique()
-selected_pintu = st.selectbox("Pilih Pintu Masuk", pintu_masuk)
-
-# Filter Data
-df_filtered = df[df['Pintu Masuk'] == selected_pintu].sort_values('Tahun-Bulan')
-
-# Validasi Data
-if len(df_filtered) < 24:
-    st.error(f"⚠️ Data historis untuk {selected_pintu} hanya {len(df_filtered)} bulan, minimal 24 bulan diperlukan")
-    st.stop()
-
-# Tampilkan data
-with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
-    st.dataframe(df_filtered, height=200)
-
 # ======================================
-# 2. Panel Kontrol - Dipindahkan ke Main Content
+# 2. Visualisasi Total Tahunan
 # ======================================
-st.subheader("⚙️ Parameter Model")
+st.header("1. Tren Total Wisatawan Tahunan")
 
-# Buat columns untuk layout parameter
+# Hitung total tahunan
+df_tahunan = df.groupby('Tahun')['Jumlah_Wisatawan'].sum().reset_index()
+df_tahunan.columns = ['Tahun', 'Total']
+
+# Tampilkan metrik utama
 col1, col2, col3 = st.columns(3)
+col1.metric("Tahun Terakhir", df_tahunan['Tahun'].max())
+col2.metric("Total Wisatawan Terakhir", f"{df_tahunan['Total'].iloc[-1]:,.0f}")
+growth = (df_tahunan['Total'].iloc[-1] - df_tahunan['Total'].iloc[-2]) / df_tahunan['Total'].iloc[-2] * 100
+col3.metric("Pertumbuhan (%)", f"{growth:.1f}%")
 
-with col1:
-    time_steps = st.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
+# Buat visualisasi
+fig1, ax1 = plt.subplots(figsize=(12, 6))
+ax1.bar(df_tahunan['Tahun'], df_tahunan['Total'], color='#1f77b4')
+ax1.plot(df_tahunan['Tahun'], df_tahunan['Total'], color='#ff7f0e', marker='o')
 
-with col2:
-    epochs = st.slider("Jumlah Epoch", 50, 300, 100)
+# Formatting
+ax1.set_title('Total Wisatawan Mancanegara per Tahun', fontsize=16, pad=20)
+ax1.set_xlabel('Tahun', fontsize=12)
+ax1.set_ylabel('Jumlah Wisatawan', fontsize=12)
+ax1.grid(True, linestyle='--', alpha=0.7)
 
-with col3:
-    future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", 
-                                  min_value=1, max_value=36, value=12)
+# Tambahkan nilai di atas setiap bar
+for index, row in df_tahunan.iterrows():
+    ax1.text(row['Tahun'], row['Total'], f"{int(row['Total']):,}", 
+             ha='center', va='bottom', fontsize=10)
 
-# Tombol untuk memulai prediksi - dipindahkan ke bawah parameter
-start_prediction = st.button("🚀 Mulai Prediksi", type="primary")
-
-if not start_prediction:
-    st.info("Silakan atur parameter di atas dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
-    st.stop()
-
-# ======================================
-# 3. Preprocessing Data
-# ======================================
-
-scaler = MinMaxScaler()
-data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
-
-def create_dataset(data, steps):
-    X, y = [], []
-    for i in range(len(data)-steps):
-        X.append(data[i:(i+steps), 0])
-        y.append(data[i+steps, 0])
-    return np.array(X), np.array(y)
-
-try:
-    X, y = create_dataset(data_scaled, time_steps)
-    X = X.reshape(X.shape[0], X.shape[1], 1)
-except Exception as e:
-    st.error(f"Error dalam preprocessing data: {str(e)}")
-    st.stop()
+st.pyplot(fig1)
 
 # ======================================
-# 4. Training Model
+# 3. Visualisasi Top 10 Pintu Masuk
 # ======================================
-split = int(0.8 * len(X))
-X_train, X_test = X[:split], X[split:]
-y_train, y_test = y[:split], y[split:]
+st.header("2. Top 10 Pintu Masuk Wisatawan")
 
-model = Sequential([
-    LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
-    LSTM(32, activation='tanh'),
-    Dense(1)
-])
-model.compile(optimizer='adam', loss='mse')
+# Daftar bandara utama yang akan difilter
+airport_names = [
+    'ngurah rai', 'soekarno-hatta', 'juanda', 'kualanamu', 'husein sastranegara',
+    'adi sucipto', 'bandara int. lombok', 'sam ratulangi', 'minangkabau',
+    'sultan syarif kasim ii', 'sultan iskandar muda', 'ahmad yani', 'supadio',
+    'hasanuddin', 'sultan badaruddin ii', 'hang nadim', 'sepinggan', 'sultan mahmud badaruddin ii'
+]
 
-with st.spinner(f'Melatih model untuk {selected_pintu} ({epochs} epoch)...'):
-    try:
-        history = model.fit(
-            X_train, y_train,
-            epochs=epochs,
-            validation_data=(X_test, y_test),
-            verbose=0
-        )
-    except Exception as e:
-        st.error(f"Error saat training model: {str(e)}")
-        st.stop()
+# Filter data dan hitung total
+df_filtered = df[df['Pintu Masuk'].str.lower().isin([x.lower() for x in airport_names])]
+df_top10 = df_filtered.groupby('Pintu Masuk')['Jumlah_Wisatawan'].sum().nlargest(10).reset_index()
+df_top10.columns = ['Pintu Masuk', 'Total']
+df_top10 = df_top10.sort_values('Total', ascending=True)
+
+# Buat visualisasi
+fig2, ax2 = plt.subplots(figsize=(12, 8))
+ax2.barh(df_top10['Pintu Masuk'], df_top10['Total'], color=plt.cm.tab10(range(10)))
+
+# Formatting
+ax2.set_title('10 Pintu Masuk Wisatawan Terbanyak (Total Historis)', fontsize=16, pad=20)
+ax2.set_xlabel('Total Wisatawan', fontsize=12)
+ax2.set_ylabel('Pintu Masuk', fontsize=12)
+ax2.grid(True, linestyle='--', alpha=0.7)
+
+# Tambahkan nilai di setiap bar
+for i, v in enumerate(df_top10['Total']):
+    ax2.text(v, i, f" {int(v):,}", color='black', va='center', fontsize=10)
+
+st.pyplot(fig2)
 
 # ======================================
-# 5. Evaluasi Model
+# 4. Visualisasi Tren Bulanan
 # ======================================
-def calculate_metrics(actual, predicted):
-    actual = actual.flatten()
-    predicted = predicted.flatten()
-    mask = actual != 0  # Hindari division by zero
-    mae = mean_absolute_error(actual[mask], predicted[mask])
-    mape = np.mean(np.abs((actual[mask] - predicted[mask]) / actual[mask])) * 100
-    return mae, mape
+st.header("3. Tren Wisatawan Bulanan")
 
-try:
-    train_pred = scaler.inverse_transform(model.predict(X_train))
-    test_pred = scaler.inverse_transform(model.predict(X_test))
-    y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
-    y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-    
-    train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
-    test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
-except Exception as e:
-    st.error(f"Error dalam evaluasi model: {str(e)}")
-    st.stop()
+# Hitung rata-rata bulanan
+df['Bulan_Nama'] = df['Tahun-Bulan'].dt.month_name()
+monthly_avg = df.groupby(['Bulan', 'Bulan_Nama'])['Jumlah_Wisatawan'].mean().reset_index()
+monthly_avg = monthly_avg.sort_values('Bulan')
 
-except Exception as e:
-    st.error(f"Error dalam evaluasi model: {str(e)}")
-    st.stop()
+# Buat visualisasi
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+ax3.plot(monthly_avg['Bulan_Nama'], monthly_avg['Jumlah_Wisatawan'], 
+        marker='o', color='#2ca02c', linewidth=2)
 
+# Formatting
+ax3.set_title('Rata-Rata Jumlah Wisatawan per Bulan (Semua Tahun)', fontsize=16, pad=20)
+ax3.set_xlabel('Bulan', fontsize=12)
+ax3.set_ylabel('Rata-Rata Wisatawan', fontsize=12)
+ax3.grid(True, linestyle='--', alpha=0.7)
+plt.xticks(rotation=45)
 
-# Tampilkan metrik
-st.subheader("📊 Evaluasi Model")
-col1, col2 = st.columns(2)
+# Tambahkan nilai di setiap titik
+for i, row in monthly_avg.iterrows():
+    ax3.text(row['Bulan_Nama'], row['Jumlah_Wisatawan'], f"{int(row['Jumlah_Wisatawan']):,}", 
+             ha='center', va='bottom', fontsize=10)
 
-col1.metric("Test MAE", f"{test_mae:,.0f}")
+st.pyplot(fig3)
 
-col2.metric("Test MAPE", f"{test_mape:.1f}%", 
-           "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
 # ======================================
-# 6. Visualisasi Hasil 
+# 5. Informasi Data
 # ======================================
-st.subheader("📈 Grafik Hasil")
+st.header("📋 Informasi Dataset")
+st.write(f"**Periode Data:** {df['Tahun'].min()} - {df['Tahun'].max()}")
+st.write(f"**Jumlah Pintu Masuk:** {df['Pintu Masuk'].nunique()}")
+st.write(f"**Total Data:** {len(df):,} observasi")
 
-try:
-    # Tab 1: Training vs Test
-    tab1, tab2 = st.tabs(["Training vs Test", "Prediksi Masa Depan"])
-
-    with tab1:
-        fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
-                y_train_actual, label='Train Aktual', color='blue')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
-                y_test_actual, label='Test Aktual', color='green')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps], 
-                train_pred, label='Prediksi Train', linestyle='--', color='red')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:], 
-                test_pred, label='Prediksi Test', linestyle='--', color='orange')
-        ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
-        ax1.legend()
-        ax1.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig1)
-
-    with tab2:
-        # Prediksi masa depan - PERBAIKAN UTAMA DI SINI
-        last_sequence = data_scaled[-time_steps:]
-        predictions = []
-
-        for _ in range(future_months):
-            next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
-            predictions.append(next_pred[0,0])
-            # Perbaikan: Pastikan sequence tetap memiliki panjang time_steps
-            last_sequence = np.append(last_sequence[1:], next_pred)[-time_steps:]
-
-        predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
-        
-        # Debugging: Tampilkan jumlah prediksi
-        st.write(f"Jumlah prediksi yang dihasilkan: {len(predictions)} (diminta: {future_months})")
-        
-        # Pastikan jumlah prediksi sesuai dengan yang diminta
-        if len(predictions) != future_months:
-            st.error(f"Jumlah prediksi ({len(predictions)}) tidak sesuai dengan yang diminta ({future_months})")
-            st.stop()
-        
-        # Buat tanggal prediksi
-        pred_dates = pd.date_range(
-            start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
-            periods=future_months,
-            freq='MS'
-        )
-
-        # Plot prediksi
-        fig2, ax2 = plt.subplots(figsize=(12, 6))
-        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'], 
-                label='Data Historis', color='blue')
-        ax2.plot(pred_dates, predictions, 
-                label='Prediksi', color='red', marker='o')
-        
-        # Anotasi nilai prediksi - tampilkan semua bulan
-        for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            ax2.text(date, pred[0], f"{int(pred[0]):,}", 
-                     ha='center', va='bottom', fontsize=9)
-
-        ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
-        ax2.legend()
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig2)
-
-        # Tabel hasil - tampilkan semua bulan
-        pred_df = pd.DataFrame({
-            'Bulan': pred_dates.strftime('%B %Y'),
-            'Prediksi': predictions.flatten().astype(int),
-            'Perubahan (%)': np.round(
-                np.insert(
-                    np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100, 
-                0, 0
-            ), 1)
-        })
-
-        st.dataframe(
-            pred_df.style.format({
-                'Prediksi': '{:,.0f}',
-                'Perubahan (%)': '{:.1f}%'
-            }).background_gradient(cmap='Blues', subset=['Perubahan (%)']),
-            height=min(400, 35*future_months),
-            use_container_width=True
-        )
-
-        # Ekspor hasil
-        csv = pred_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Prediksi (CSV)",
-            data=csv,
-            file_name=f"prediksi_{selected_pintu.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime='text/csv'
-        )
-
-except Exception as e:
-    st.error(f"Error dalam visualisasi: {str(e)}")
-
+with st.expander("🔍 Lihat Contoh Data"):
+    st.dataframe(df.sample(10, random_state=42))
