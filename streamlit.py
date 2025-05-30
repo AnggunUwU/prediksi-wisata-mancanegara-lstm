@@ -20,41 +20,37 @@ def load_data():
         # Membaca semua sheet dari file Excel
         dfs = pd.read_excel(url, sheet_name=None)
         
-        # Menggabungkan semua sheet menjadi satu DataFrame
-        df = pd.concat(dfs.values(), ignore_index=True)
-        
-        # Pembersihan data
+       # Preprocessing data
         df = df.replace('-', 0)
         df = df.fillna(0)
+        df = df.replace(',', '')
+        df['Tahun'] = df['Tahun'].astype(int)
         
-        # Mengubah kolom numerik yang mungkin berisi string dengan koma
-        numeric_cols = df.select_dtypes(include=[object]).columns
-        for col in numeric_cols:
-            if df[col].astype(str).str.contains(',').any():
-                df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+        # Memilih kolom numerik
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
         
-        # Mengubah tipe data tahun menjadi integer
-        if 'Tahun' in df.columns:
-            df['Tahun'] = df['Tahun'].astype(int)
+        # Menambahkan kolom 'Tahunan'
+        df['Tahunan'] = df[numeric_columns].sum(axis=1)
+        df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
         
-        # Membersihkan kolom Pintu Masuk
-        if 'Pintu Masuk' in df.columns:
-            df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
+        # Menampilkan data
+        st.subheader('Data Wisatawan')
+        st.write(df)
         
-        # Mengurutkan data
-        if 'Tahun-Bulan' in df.columns:
-            df = df.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
+        # Visualisasi
+        st.subheader('Grafik Total Tahunan Wisatawan')
         
-        return df
-    
-    except Exception as e:
-        st.error(f"Gagal memuat data: {str(e)}")
-        return pd.DataFrame()
-
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(df['Tahun'], df['Tahunan'], color='skyblue')
+        ax.set_ylim(0, max(df['Tahunan']) * 1.1)
+        ax.set_title('Total Tahunan Wisatawan di Indonesia', fontsize=14)
+        ax.set_xlabel('Tahun', fontsize=12)
+        ax.set_ylabel('Total Tahunan', fontsize=12)
+        
+        st.pyplot(fig)
+        
 df = load_data()
 
-if df.empty:
-    st.stop()
 
 # ======================================
 # 2. Visualisasi Total Tahunan
