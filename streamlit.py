@@ -79,15 +79,12 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
 st.subheader("⚙️ Parameter Model")
 
 # Buat columns untuk layout parameter
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(3)
 
 with col1:
-    time_steps = st.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
-
-with col2:
     epochs = st.slider("Jumlah Epoch", 50, 300, 100)
 
-with col3:
+with col2:
     future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", 
                                   min_value=1, max_value=36, value=12)
 
