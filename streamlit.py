@@ -16,32 +16,13 @@ def load_data():
     url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/blob/main/Hasil%20Gabung.xlsx"
     
     try:
-        # Baca semua sheet dan gabungkan
-        all_sheets = pd.read_excel(url, sheet_name=None)
-        df = pd.concat(all_sheets.values(), ignore_index=True)
-        
-        # Bersihkan data
-        df = df.dropna(subset=['Pintu Masuk'])
-        df = df[df['Pintu Masuk'] != 'Pintu Masuk']  # Hapus baris header yang terduplikat
-        
-        # Ubah ke format long jika diperlukan
-        if 'Januari' in df.columns:  # Jika masih format wide
-            df = df.melt(
-                id_vars=['Pintu Masuk', 'Tahun'],
-                value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-                           'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
-                var_name='Bulan',
-                value_name='Jumlah_Wisatawan'
-            )
-            bulan_mapping = {m: i+1 for i, m in enumerate([
-                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-            ])}
-            df['Bulan'] = df['Bulan'].map(bulan_mapping)
-            df['Tahun-Bulan'] = pd.to_datetime(
-                df['Tahun'].astype(str) + '-' + df['Bulan'].astype(str) + '-01'
-            )
-        
+        df = df.replace('-',0)
+        df = df.fillna(0)
+        df = df.replace(',','')
+        df['Tahun'] = df['Tahun'].astype(int)
+        # Memilih kolom numerik
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
         return df.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
     
     except Exception as e:
