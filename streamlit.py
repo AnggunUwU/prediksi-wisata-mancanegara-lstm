@@ -130,7 +130,6 @@ for i, val in enumerate(df_top10['Jumlah_Wisatawan']):
             va='center', fontsize=8, color='black')
 
 st.pyplot(fig2, use_container_width=True)
-
 # ======================================
 # 4. Compact Visualisasi Tren Bulanan
 # ======================================
