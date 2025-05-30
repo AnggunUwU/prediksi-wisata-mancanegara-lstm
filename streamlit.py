@@ -13,7 +13,7 @@ st.title('📊 Analisis Data Wisatawan Mancanegara')
 # ======================================
 @st.cache_data
 def load_data():
-    url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/raw/main/data.xlsx"
+    url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/blob/main/Hasil%20Gabung.xlsx"
     
     try:
         # Baca semua sheet dan gabungkan
