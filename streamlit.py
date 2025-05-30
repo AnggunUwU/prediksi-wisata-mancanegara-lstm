@@ -16,6 +16,7 @@ def load_data():
     url = "https://github.com/AnggunUwU/prediksi-wisata-mancanegara-lstm/blob/main/Hasil%20Gabung.xlsx"
     
     try:
+        df = pd.read_excel(url, sheet_name=None)
         df = df.replace('-',0)
         df = df.fillna(0)
         df = df.replace(',','')
