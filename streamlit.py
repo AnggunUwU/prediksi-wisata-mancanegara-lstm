@@ -20,30 +20,18 @@ def load_data():
         # Membaca semua sheet dari file Excel
         dfs = pd.read_excel(url, sheet_name=None)
         
-        # Menggabungkan semua sheet menjadi satu DataFrame
-        df = pd.concat(dfs.values(), ignore_index=True)
-        
-        # Pembersihan data
+          # Preprocessing data
         df = df.replace('-', 0)
         df = df.fillna(0)
+        df = df.replace(',', '')
+        df['Tahun'] = df['Tahun'].astype(int)
         
-        # Mengubah kolom numerik yang mungkin berisi string dengan koma
-        numeric_cols = df.select_dtypes(include=[object]).columns
-        for col in numeric_cols:
-            if df[col].astype(str).str.contains(',').any():
-                df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+        # Memilih kolom numerik
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
         
-        # Mengubah tipe data tahun menjadi integer
-        if 'Tahun' in df.columns:
-            df['Tahun'] = df['Tahun'].astype(int)
-        
-        # Membersihkan kolom Pintu Masuk
-        if 'Pintu Masuk' in df.columns:
-            df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
-        
-        # Mengurutkan data
-        if 'Tahun-Bulan' in df.columns:
-            df = df.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
+        # Menambahkan kolom 'Tahunan'
+        df['Tahunan'] = df[numeric_columns].sum(axis=1)
+        df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
         
         return df
     
