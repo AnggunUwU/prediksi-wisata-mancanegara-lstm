@@ -20,37 +20,41 @@ def load_data():
         # Membaca semua sheet dari file Excel
         dfs = pd.read_excel(url, sheet_name=None)
         
-       # Preprocessing data
+        # Menggabungkan semua sheet menjadi satu DataFrame
+        df = pd.concat(dfs.values(), ignore_index=True)
+        
+        # Pembersihan data
         df = df.replace('-', 0)
         df = df.fillna(0)
-        df = df.replace(',', '')
-        df['Tahun'] = df['Tahun'].astype(int)
         
-        # Memilih kolom numerik
-        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        # Mengubah kolom numerik yang mungkin berisi string dengan koma
+        numeric_cols = df.select_dtypes(include=[object]).columns
+        for col in numeric_cols:
+            if df[col].astype(str).str.contains(',').any():
+                df[col] = df[col].astype(str).str.replace(',', '').astype(float)
         
-        # Menambahkan kolom 'Tahunan'
-        df['Tahunan'] = df[numeric_columns].sum(axis=1)
-        df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
+        # Mengubah tipe data tahun menjadi integer
+        if 'Tahun' in df.columns:
+            df['Tahun'] = df['Tahun'].astype(int)
         
-        # Menampilkan data
-        st.subheader('Data Wisatawan')
-        st.write(df)
+        # Membersihkan kolom Pintu Masuk
+        if 'Pintu Masuk' in df.columns:
+            df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
         
-        # Visualisasi
-        st.subheader('Grafik Total Tahunan Wisatawan')
+        # Mengurutkan data
+        if 'Tahun-Bulan' in df.columns:
+            df = df.sort_values(['Pintu Masuk', 'Tahun-Bulan'])
         
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.bar(df['Tahun'], df['Tahunan'], color='skyblue')
-        ax.set_ylim(0, max(df['Tahunan']) * 1.1)
-        ax.set_title('Total Tahunan Wisatawan di Indonesia', fontsize=14)
-        ax.set_xlabel('Tahun', fontsize=12)
-        ax.set_ylabel('Total Tahunan', fontsize=12)
-        
-        st.pyplot(fig)
-        
+        return df
+    
+    except Exception as e:
+        st.error(f"Gagal memuat data: {str(e)}")
+        return pd.DataFrame()
+
 df = load_data()
 
+if df.empty:
+    st.stop()
 
 # ======================================
 # 2. Visualisasi Total Tahunan
@@ -58,8 +62,8 @@ df = load_data()
 st.header("1. Tren Total Wisatawan Tahunan")
 
 # Hitung total tahunan
-if 'Tahun' in df.columns and 'Pintu Masuk' in df.columns:
-    df_tahunan = df.groupby('Tahun')['Pintu Masuk'].sum().reset_index()
+if 'Tahun' in df.columns and 'Jumlah_Wisatawan' in df.columns:
+    df_tahunan = df.groupby('Tahun')['Jumlah_Wisatawan'].sum().reset_index()
     df_tahunan.columns = ['Tahun', 'Total']
     
     # Tampilkan metrik utama
@@ -91,14 +95,14 @@ if 'Tahun' in df.columns and 'Pintu Masuk' in df.columns:
     
     st.pyplot(fig1)
 else:
-    st.warning("Kolom 'Tahun' atau 'Pintu Masuk' tidak ditemukan dalam dataset")
+    st.warning("Kolom 'Tahun' atau 'Jumlah_Wisatawan' tidak ditemukan dalam dataset")
 
 # ======================================
 # 3. Visualisasi Top 10 Pintu Masuk
 # ======================================
 st.header("2. Top 10 Pintu Masuk Wisatawan")
 
-if 'Pintu Masuk' in df.columns and 'Pintu Masuk' in df.columns:
+if 'Pintu Masuk' in df.columns and 'Jumlah_Wisatawan' in df.columns:
     # Daftar bandara utama yang akan difilter
     airport_names = [
         'ngurah rai', 'soekarno-hatta', 'juanda', 'kualanamu', 'husein sastranegara',
@@ -109,7 +113,7 @@ if 'Pintu Masuk' in df.columns and 'Pintu Masuk' in df.columns:
     
     # Filter data dan hitung total
     df_filtered = df[df['Pintu Masuk'].str.lower().isin([x.lower() for x in airport_names])]
-    df_top10 = df_filtered.groupby('Pintu Masuk')['Pintu Masuk'].sum().nlargest(10).reset_index()
+    df_top10 = df_filtered.groupby('Pintu Masuk')['Jumlah_Wisatawan'].sum().nlargest(10).reset_index()
     df_top10.columns = ['Pintu Masuk', 'Total']
     df_top10 = df_top10.sort_values('Total', ascending=True)
     
@@ -129,25 +133,25 @@ if 'Pintu Masuk' in df.columns and 'Pintu Masuk' in df.columns:
     
     st.pyplot(fig2)
 else:
-    st.warning("Kolom 'Pintu Masuk' atau 'Pintu Masuk' tidak ditemukan dalam dataset")
+    st.warning("Kolom 'Pintu Masuk' atau 'Jumlah_Wisatawan' tidak ditemukan dalam dataset")
 
 # ======================================
 # 4. Visualisasi Tren Bulanan
 # ======================================
 st.header("3. Tren Wisatawan Bulanan")
 
-if 'Tahun-Bulan' in df.columns and 'Pintu Masuk' in df.columns:
+if 'Tahun-Bulan' in df.columns and 'Jumlah_Wisatawan' in df.columns:
     # Ekstrak bulan dari kolom Tahun-Bulan
     df['Bulan'] = df['Tahun-Bulan'].dt.month
     df['Bulan_Nama'] = df['Tahun-Bulan'].dt.month_name()
     
     # Hitung rata-rata bulanan
-    monthly_avg = df.groupby(['Bulan', 'Bulan_Nama'])['Pintu Masuk'].mean().reset_index()
+    monthly_avg = df.groupby(['Bulan', 'Bulan_Nama'])['Jumlah_Wisatawan'].mean().reset_index()
     monthly_avg = monthly_avg.sort_values('Bulan')
     
     # Buat visualisasi
     fig3, ax3 = plt.subplots(figsize=(12, 6))
-    ax3.plot(monthly_avg['Bulan_Nama'], monthly_avg['Pintu Masuk'], 
+    ax3.plot(monthly_avg['Bulan_Nama'], monthly_avg['Jumlah_Wisatawan'], 
             marker='o', color='#2ca02c', linewidth=2)
     
     # Formatting
@@ -159,12 +163,12 @@ if 'Tahun-Bulan' in df.columns and 'Pintu Masuk' in df.columns:
     
     # Tambahkan nilai di setiap titik
     for i, row in monthly_avg.iterrows():
-        ax3.text(row['Bulan_Nama'], row['Pintu Masuk'], f"{int(row['Pintu Masuk']):,}", 
+        ax3.text(row['Bulan_Nama'], row['Jumlah_Wisatawan'], f"{int(row['Jumlah_Wisatawan']):,}", 
                  ha='center', va='bottom', fontsize=10)
     
     st.pyplot(fig3)
 else:
-    st.warning("Kolom 'Tahun-Bulan' atau 'Pintu Masuk' tidak ditemukan dalam dataset")
+    st.warning("Kolom 'Tahun-Bulan' atau 'Jumlah_Wisatawan' tidak ditemukan dalam dataset")
 
 # ======================================
 # 5. Informasi Data
