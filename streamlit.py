@@ -49,42 +49,21 @@ if df.empty:
 # ======================================
 st.header("1. Tren Total Wisatawan Tahunan")
 
-# Hitung total tahunan
-if 'Tahun' in df.columns and 'Jumlah_Wisatawan' in df.columns:
-    df_tahunan = df.groupby('Tahun')['Jumlah_Wisatawan'].sum().reset_index()
-    df_tahunan.columns = ['Tahun', 'Total']
-    
-    # Tampilkan metrik utama
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Tahun Terakhir", df_tahunan['Tahun'].max())
-    col2.metric("Total Wisatawan Terakhir", f"{df_tahunan['Total'].iloc[-1]:,.0f}")
-    
-    if len(df_tahunan) > 1:
-        growth = (df_tahunan['Total'].iloc[-1] - df_tahunan['Total'].iloc[-2]) / df_tahunan['Total'].iloc[-2] * 100
-        col3.metric("Pertumbuhan (%)", f"{growth:.1f}%")
-    else:
-        col3.metric("Pertumbuhan (%)", "N/A")
-    
-    # Buat visualisasi
-    fig1, ax1 = plt.subplots(figsize=(12, 6))
-    ax1.bar(df_tahunan['Tahun'], df_tahunan['Total'], color='#1f77b4')
-    ax1.plot(df_tahunan['Tahun'], df_tahunan['Total'], color='#ff7f0e', marker='o')
-    
-    # Formatting
-    ax1.set_title('Total Wisatawan Mancanegara per Tahun', fontsize=16, pad=20)
-    ax1.set_xlabel('Tahun', fontsize=12)
-    ax1.set_ylabel('Jumlah Wisatawan', fontsize=12)
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    
-    # Tambahkan nilai di atas setiap bar
-    for index, row in df_tahunan.iterrows():
-        ax1.text(row['Tahun'], row['Total'], f"{int(row['Total']):,}", 
-                 ha='center', va='bottom', fontsize=10)
-    
-    st.pyplot(fig1)
-else:
-    st.warning("Kolom 'Tahun' atau 'Jumlah_Wisatawan' tidak ditemukan dalam dataset")
-
+# Menampilkan data
+        st.subheader('Data Wisatawan')
+        st.write(df)
+        
+        # Visualisasi
+        st.subheader('Grafik Total Tahunan Wisatawan')
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(df['Tahun'], df['Tahunan'], color='skyblue')
+        ax.set_ylim(0, max(df['Tahunan']) * 1.1)
+        ax.set_title('Total Tahunan Wisatawan di Indonesia', fontsize=14)
+        ax.set_xlabel('Tahun', fontsize=12)
+        ax.set_ylabel('Total Tahunan', fontsize=12)
+        
+        st.pyplot(fig)
 # ======================================
 # 3. Visualisasi Top 10 Pintu Masuk
 # ======================================
