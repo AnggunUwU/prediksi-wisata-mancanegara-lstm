@@ -58,8 +58,9 @@ if df.empty:
     st.stop()
 
 # Pilih Pintu Masuk
+st.subheader("🔘 Pilih Data")
 pintu_masuk = df['Pintu Masuk'].unique()
-selected_pintu = st.selectbox("Pilih Pintu Masuk", pintu_masuk)
+selected_pintu = st.selectbox("Pintu Masuk", pintu_masuk)
 
 # Filter Data
 df_filtered = df[df['Pintu Masuk'] == selected_pintu].sort_values('Tahun-Bulan')
@@ -78,56 +79,82 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
 # ======================================
 st.subheader("⚙️ Parameter Model")
 
+# Buat dalam bentuk columns
 col1, col2, col3 = st.columns(3)
+
 with col1:
-    time_steps = st.number_input(
-        "Jumlah Bulan Lookback (Time Steps)", 
-        min_value=3, 
-        max_value=36, 
+    st.markdown("**🔧 Konfigurasi Model**")
+    time_steps = st.slider(
+        "Jumlah Bulan Lookback",
+        min_value=3,
+        max_value=24,
         value=12,
-        help="Jumlah bulan historis yang digunakan untuk memprediksi bulan berikutnya"
+        help="Jumlah bulan sebelumnya yang digunakan untuk prediksi"
     )
     
     # Validasi lookback
     if time_steps >= len(df_filtered):
-        st.error(f"⚠️ Lookback ({time_steps} bulan) tidak boleh melebihi data historis ({len(df_filtered)} bulan)")
+        st.error(f"⚠️ Lookback ({time_steps} bulan) melebihi data historis ({len(df_filtered)} bulan)")
         st.stop()
 
 with col2:
+    st.markdown("**🔄 Pelatihan Model**")
     epochs = st.slider(
         "Jumlah Epoch", 
-        50, 300, 100,
-        help="Jumlah iterasi training model"
+        min_value=50,
+        max_value=300,
+        value=100,
+        step=50,
+        help="Jumlah iterasi pelatihan model"
     )
 
 with col3:
-    future_months = st.number_input(
+    st.markdown("**🔮 Prediksi**")
+    future_months = st.selectbox(
         "Prediksi Berapa Bulan ke Depan?",
-        min_value=1, 
-        max_value=36, 
-        value=12,
-        help="Jumlah bulan yang akan diprediksi ke depan"
+        options=[3, 6, 12, 18, 24],
+        index=2,
+        help="Jumlah bulan yang akan diprediksi"
     )
+
+# Tombol Aksi
+st.markdown("---")
+col_run, col_reset = st.columns(2)
+with col_run:
+    run_model = st.button("🚀 Jalankan Model", type="primary", use_container_width=True)
+with col_reset:
+    reset_params = st.button("🔄 Reset Parameter", use_container_width=True)
+
+if reset_params:
+    time_steps = 12
+    epochs = 100
+    future_months = 12
+    st.experimental_rerun()
+
+if not run_model:
+    st.info("ℹ️ Silakan atur parameter dan klik 'Jalankan Model' untuk memulai prediksi")
+    st.stop()
 
 # ======================================
 # 3. Preprocessing Data
 # ======================================
-scaler = RobustScaler()
-data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
+with st.spinner('🔨 Mempersiapkan data...'):
+    scaler = RobustScaler()
+    data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
-def create_dataset(data, steps):
-    X, y = [], []
-    for i in range(len(data)-steps):
-        X.append(data[i:(i+steps), 0])
-        y.append(data[i+steps, 0])
-    return np.array(X), np.array(y)
+    def create_dataset(data, steps):
+        X, y = [], []
+        for i in range(len(data)-steps):
+            X.append(data[i:(i+steps), 0])
+            y.append(data[i+steps, 0])
+        return np.array(X), np.array(y)
 
-try:
-    X, y = create_dataset(data_scaled, time_steps)
-    X = X.reshape(X.shape[0], X.shape[1], 1)
-except Exception as e:
-    st.error(f"Error dalam preprocessing data: {str(e)}")
-    st.stop()
+    try:
+        X, y = create_dataset(data_scaled, time_steps)
+        X = X.reshape(X.shape[0], X.shape[1], 1)
+    except Exception as e:
+        st.error(f"Error dalam preprocessing data: {str(e)}")
+        st.stop()
 
 # ======================================
 # 4. Training Model
@@ -143,17 +170,22 @@ model = Sequential([
 ])
 model.compile(optimizer='adam', loss='mse')
 
-with st.spinner(f'Melatih model untuk {selected_pintu} ({epochs} epoch)...'):
-    try:
-        history = model.fit(
-            X_train, y_train,
-            epochs=epochs,
-            validation_data=(X_test, y_test),
-            verbose=0
-        )
-    except Exception as e:
-        st.error(f"Error saat training model: {str(e)}")
-        st.stop()
+progress_bar = st.progress(0)
+status_text = st.empty()
+
+for epoch in range(epochs):
+    history = model.fit(
+        X_train, y_train,
+        epochs=1,
+        validation_data=(X_test, y_test),
+        verbose=0
+    )
+    progress = (epoch + 1) / epochs
+    progress_bar.progress(progress)
+    status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+
+progress_bar.empty()
+status_text.empty()
 
 # ======================================
 # 5. Evaluasi Model
@@ -190,11 +222,11 @@ col3.metric("Test MAPE", f"{test_mape:.1f}%",
 # ======================================
 # 6. Visualisasi Hasil
 # ======================================
-st.subheader("📈 Grafik Hasil")
+st.subheader("📈 Hasil Prediksi")
 
 try:
     # Tab 1: Training vs Test
-    tab1, tab2 = st.tabs(["Training vs Test", "Prediksi Masa Depan"])
+    tab1, tab2 = st.tabs(["📉 Training vs Test", "🔮 Prediksi Masa Depan"])
 
     with tab1:
         fig1, ax1 = plt.subplots(figsize=(12, 6))
@@ -269,29 +301,41 @@ try:
         # Ekspor hasil
         csv = pred_df.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Download Prediksi (CSV)",
+            label="📥 Download Hasil Prediksi (CSV)",
             data=csv,
             file_name=f"prediksi_{selected_pintu.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime='text/csv'
+            mime='text/csv',
+            use_container_width=True
         )
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
 
 # Tambahkan penjelasan tentang parameter
-with st.expander("ℹ️ Panduan Parameter"):
+with st.expander("ℹ️ Panduan Penggunaan"):
     st.markdown("""
-    **Jumlah Bulan Lookback (Time Steps):**
-    - Menentukan berapa bulan historis yang digunakan untuk memprediksi bulan berikutnya
-    - Nilai umum: 12 bulan (untuk menangkap pola tahunan)
+    ### 🎛️ Panduan Parameter:
+    
+    **Jumlah Bulan Lookback:**
+    - Menentukan berapa bulan sebelumnya yang digunakan untuk memprediksi bulan berikutnya
+    - Nilai default: 12 bulan (untuk menangkap pola tahunan)
     - Nilai lebih tinggi bisa menangkap pola jangka panjang tapi risiko overfitting
     
     **Jumlah Epoch:**
-    - Jumlah iterasi training model
+    - Jumlah iterasi pelatihan model
+    - Nilai default: 100
     - Terlalu rendah: model kurang optimal
     - Terlalu tinggi: risiko overfitting dan waktu training lama
     
     **Bulan Prediksi:**
     - Jumlah bulan ke depan yang ingin diprediksi
+    - Pilihan: 3, 6, 12, 18, atau 24 bulan
     - Prediksi jangka panjang (≥12 bulan) akurasinya mungkin menurun
+    
+    ### 🛠️ Cara Penggunaan:
+    1. Pilih pintu masuk dari dropdown
+    2. Atur parameter sesuai kebutuhan
+    3. Klik tombol **🚀 Jalankan Model**
+    4. Lihat hasil prediksi di tab **🔮 Prediksi Masa Depan**
+    5. Download hasil prediksi jika diperlukan
     """)
