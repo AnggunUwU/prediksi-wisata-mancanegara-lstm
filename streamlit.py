@@ -93,10 +93,6 @@ if not start_prediction:
 # ======================================
 # 3. Preprocessing Data
 # ======================================
-# ... (kode selanjutnya tetap sama)
-# ======================================
-# 3. Preprocessing Data
-# ======================================
 scaler = RobustScaler()
 data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
