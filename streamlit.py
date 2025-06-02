@@ -84,11 +84,10 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("**🔧 Konfigurasi Model**")
-    time_steps = st.slider(
+    time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
-        min_value=3,
-        max_value=24,
-        value=12,
+        options=[3, 6, 9, 12, 18, 24],
+        index=3,  # Default ke 12 bulan
         help="Jumlah bulan sebelumnya yang digunakan untuk prediksi"
     )
     
@@ -113,7 +112,7 @@ with col3:
     future_months = st.selectbox(
         "Prediksi Berapa Bulan ke Depan?",
         options=[3, 6, 12, 18, 24],
-        index=2,
+        index=2,  # Default ke 12 bulan
         help="Jumlah bulan yang akan diprediksi"
     )
 
@@ -317,25 +316,23 @@ with st.expander("ℹ️ Panduan Penggunaan"):
     ### 🎛️ Panduan Parameter:
     
     **Jumlah Bulan Lookback:**
-    - Menentukan berapa bulan sebelumnya yang digunakan untuk memprediksi bulan berikutnya
-    - Nilai default: 12 bulan (untuk menangkap pola tahunan)
-    - Nilai lebih tinggi bisa menangkap pola jangka panjang tapi risiko overfitting
+    - Pilihan: 3, 6, 9, 12, 18, atau 24 bulan
+    - Default: 12 bulan (optimal untuk pola tahunan)
+    - Nilai lebih tinggi untuk pola jangka panjang
     
     **Jumlah Epoch:**
-    - Jumlah iterasi pelatihan model
-    - Nilai default: 100
-    - Terlalu rendah: model kurang optimal
-    - Terlalu tinggi: risiko overfitting dan waktu training lama
+    - Range: 50-300
+    - Default: 100
+    - Lebih tinggi = lebih akurat tapi lebih lama
     
     **Bulan Prediksi:**
-    - Jumlah bulan ke depan yang ingin diprediksi
     - Pilihan: 3, 6, 12, 18, atau 24 bulan
-    - Prediksi jangka panjang (≥12 bulan) akurasinya mungkin menurun
+    - Default: 12 bulan
     
     ### 🛠️ Cara Penggunaan:
-    1. Pilih pintu masuk dari dropdown
-    2. Atur parameter sesuai kebutuhan
-    3. Klik tombol **🚀 Jalankan Model**
-    4. Lihat hasil prediksi di tab **🔮 Prediksi Masa Depan**
-    5. Download hasil prediksi jika diperlukan
+    1. Pilih pintu masuk
+    2. Atur parameter
+    3. Klik 'Jalankan Model'
+    4. Lihat hasil di tab Prediksi
+    5. Download hasil jika perlu
     """)
