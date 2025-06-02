@@ -90,7 +90,7 @@ if not start_prediction:
     st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
     st.stop()
 
-# ======================================
+======================================
 # 3. Preprocessing Data
 # ======================================
 scaler = RobustScaler()
@@ -258,3 +258,5 @@ try:
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
+
+tolong berikan tombol button untuk memulai prediksi agar tidak auto predict saat penginputan
