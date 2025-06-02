@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
@@ -74,26 +74,35 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
     st.dataframe(df_filtered, height=200)
 
 # ======================================
-# 2. Panel Kontrol
+# 2. Panel Kontrol - Dipindahkan ke Main Content
 # ======================================
-st.sidebar.header("⚙️ Parameter Model")
-time_steps = st.sidebar.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
-epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
-future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", 
-                                      min_value=1, max_value=36, value=12)
+st.subheader("⚙️ Parameter Model")
 
-# Tombol untuk memulai prediksi
-start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
+# Buat columns untuk layout parameter
+col1, col2 = st.columns(2)
 
-# Jika tombol belum ditekan, tampilkan pesan dan berhenti
+with col1:
+    epochs = st.slider("Jumlah Epoch", 50, 300, 100)
+
+with col2:
+    future_months = st.number_input("Prediksi Berapa Bulan ke Depan?", 
+                                  min_value=1, max_value=36, value=12)
+
+# Set time_steps menjadi 1 (fixed)
+time_steps = 1
+
+# Tombol untuk memulai prediksi - dipindahkan ke bawah parameter
+start_prediction = st.button("🚀 Mulai Prediksi", type="primary")
+
 if not start_prediction:
-    st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
+    st.info("Silakan atur parameter di atas dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
     st.stop()
 
-======================================
+# ======================================
 # 3. Preprocessing Data
 # ======================================
-scaler = RobustScaler()
+
+scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
 
 def create_dataset(data, steps):
@@ -161,15 +170,15 @@ except Exception as e:
 
 # Tampilkan metrik
 st.subheader("📊 Evaluasi Model")
-col1, col2, col3 = st.columns(3)
-col1.metric("Train MAE", f"{train_mae:,.0f}")
-col2.metric("Test MAE", f"{test_mae:,.0f}", 
-           delta=f"{(test_mae-train_mae)/train_mae*100:.1f}% vs Train" if train_mae != 0 else "N/A")
-col3.metric("Test MAPE", f"{test_mape:.1f}%", 
+col1, col2 = st.columns(2)
+
+col1.metric("Test MAE", f"{test_mae:,.0f}")
+
+col2.metric("Test MAPE", f"{test_mape:.1f}%", 
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
 
 # ======================================
-# 6. Visualisasi Hasil
+# 6. Visualisasi Hasil 
 # ======================================
 st.subheader("📈 Grafik Hasil")
 
@@ -200,9 +209,11 @@ try:
         for _ in range(future_months):
             next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
             predictions.append(next_pred[0,0])
-            last_sequence = np.append(last_sequence[1:], next_pred)
+            last_sequence = np.array([next_pred[0,0]]).reshape(-1, 1)  # Update sequence dengan prediksi terakhir
 
         predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        
+        # Buat tanggal prediksi
         pred_dates = pd.date_range(
             start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
             periods=future_months,
@@ -218,9 +229,8 @@ try:
         
         # Anotasi nilai prediksi
         for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            if i % max(1, future_months//6) == 0 or i == len(pred_dates)-1:
-                ax2.text(date, pred[0], f"{int(pred[0]):,}", 
-                         ha='center', va='bottom', fontsize=9)
+            ax2.text(date, pred[0], f"{int(pred[0]):,}", 
+                     ha='center', va='bottom', fontsize=9)
 
         ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
         ax2.legend()
@@ -258,5 +268,3 @@ try:
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
-
-tolong berikan tombol button untuk memulai prediksi agar tidak auto predict saat penginputan
