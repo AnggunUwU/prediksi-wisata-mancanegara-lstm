@@ -74,13 +74,40 @@ with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
     st.dataframe(df_filtered, height=200)
 
 # ======================================
-# 2. Panel Kontrol
+# 2. Panel Kontrol - DI MAIN AREA
 # ======================================
-st.sidebar.header("⚙️ Parameter Model")
-time_steps = st.sidebar.selectbox("Jumlah Bulan Lookback", [6, 12, 24], index=1)
-epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
-future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?",
-                                      min_value=1, max_value=36, value=12)
+st.subheader("⚙️ Parameter Model")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    time_steps = st.number_input(
+        "Jumlah Bulan Lookback (Time Steps)", 
+        min_value=3, 
+        max_value=36, 
+        value=12,
+        help="Jumlah bulan historis yang digunakan untuk memprediksi bulan berikutnya"
+    )
+    
+    # Validasi lookback
+    if time_steps >= len(df_filtered):
+        st.error(f"⚠️ Lookback ({time_steps} bulan) tidak boleh melebihi data historis ({len(df_filtered)} bulan)")
+        st.stop()
+
+with col2:
+    epochs = st.slider(
+        "Jumlah Epoch", 
+        50, 300, 100,
+        help="Jumlah iterasi training model"
+    )
+
+with col3:
+    future_months = st.number_input(
+        "Prediksi Berapa Bulan ke Depan?",
+        min_value=1, 
+        max_value=36, 
+        value=12,
+        help="Jumlah bulan yang akan diprediksi ke depan"
+    )
 
 # ======================================
 # 3. Preprocessing Data
@@ -250,3 +277,21 @@ try:
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
+
+# Tambahkan penjelasan tentang parameter
+with st.expander("ℹ️ Panduan Parameter"):
+    st.markdown("""
+    **Jumlah Bulan Lookback (Time Steps):**
+    - Menentukan berapa bulan historis yang digunakan untuk memprediksi bulan berikutnya
+    - Nilai umum: 12 bulan (untuk menangkap pola tahunan)
+    - Nilai lebih tinggi bisa menangkap pola jangka panjang tapi risiko overfitting
+    
+    **Jumlah Epoch:**
+    - Jumlah iterasi training model
+    - Terlalu rendah: model kurang optimal
+    - Terlalu tinggi: risiko overfitting dan waktu training lama
+    
+    **Bulan Prediksi:**
+    - Jumlah bulan ke depan yang ingin diprediksi
+    - Prediksi jangka panjang (≥12 bulan) akurasinya mungkin menurun
+    """)
