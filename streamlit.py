@@ -82,6 +82,18 @@ epochs = st.sidebar.slider("Jumlah Epoch", 50, 300, 100)
 future_months = st.sidebar.number_input("Prediksi Berapa Bulan ke Depan?", 
                                       min_value=1, max_value=36, value=12)
 
+# Tombol untuk memulai prediksi
+start_prediction = st.sidebar.button("🚀 Mulai Prediksi", type="primary")
+
+# Jika tombol belum ditekan, tampilkan pesan dan berhenti
+if not start_prediction:
+    st.info("Silakan atur parameter di sidebar dan klik tombol '🚀 Mulai Prediksi' untuk memulai")
+    st.stop()
+
+# ======================================
+# 3. Preprocessing Data
+# ======================================
+# ... (kode selanjutnya tetap sama)
 # ======================================
 # 3. Preprocessing Data
 # ======================================
