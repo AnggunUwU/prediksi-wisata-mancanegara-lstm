@@ -109,11 +109,9 @@ with col2:
 
 with col3:
     st.markdown("**🔮 Prediksi**")
-    future_months = st.selectbox(
-        "Prediksi Berapa Bulan ke Depan?",
-        options=[3, 6, 12, 18, 24],
-        index=2,  # Default ke 12 bulan
-        help="Jumlah bulan yang akan diprediksi"
+    future_months = st.number_input
+    ("Prediksi Berapa Bulan ke Depan?",
+    min_value=1, max_value=36, value=12)
     )
 
 # Tombol Aksi
