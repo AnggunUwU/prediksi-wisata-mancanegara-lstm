@@ -28,7 +28,7 @@ with st.expander("ℹ️ Panduan Penggunaan"):
     - Lebih tinggi = lebih akurat tapi lebih lama
     
     **Bulan Prediksi:**
-    - Pilihan: 3, 6, 12, 18, atau 24 bulan
+    - Pilihan: Range 1 - 24 bulan
     - Default: 12 bulan
     
     ### 🛠️ Cara Penggunaan:
