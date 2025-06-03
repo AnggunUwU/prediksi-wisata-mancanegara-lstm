@@ -111,7 +111,9 @@ with col3:
     st.markdown("**🔮 Prediksi**")
     future_months = st.number_input(
         "Prediksi Berapa Bulan ke Depan?",
-        min_value=1, max_value=36, value=12)
+        min_value=1, 
+        max_value=36, 
+        value=12
     )
 
 # Tombol Aksi
