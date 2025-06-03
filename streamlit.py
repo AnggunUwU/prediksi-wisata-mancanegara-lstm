@@ -12,6 +12,33 @@ from datetime import datetime
 st.set_page_config(page_title="📅 Prediksi Wisatawan - LSTM", layout="wide")
 st.title('📅 Prediksi Jumlah Wisatawan per Pintu Masuk')
 
+# Tambahkan penjelasan tentang parameter
+with st.expander("ℹ️ Panduan Penggunaan"):
+    st.markdown("""
+    ### 🎛️ Panduan Parameter:
+    
+    **Jumlah Bulan Lookback:**
+    - Pilihan: 3, 6, 9, 12, 18, atau 24 bulan
+    - Default: 12 bulan (optimal untuk pola tahunan)
+    - Nilai lebih tinggi untuk pola jangka panjang
+    
+    **Jumlah Epoch:**
+    - Range: 50-300
+    - Default: 100
+    - Lebih tinggi = lebih akurat tapi lebih lama
+    
+    **Bulan Prediksi:**
+    - Pilihan: 3, 6, 12, 18, atau 24 bulan
+    - Default: 12 bulan
+    
+    ### 🛠️ Cara Penggunaan:
+    1. Pilih pintu masuk
+    2. Atur parameter
+    3. Klik 'Jalankan Model'
+    4. Lihat hasil di tab Prediksi
+    5. Download hasil jika perlu
+    """)
+
 # ======================================
 # 1. Load dan Persiapkan Data
 # ======================================
@@ -296,30 +323,3 @@ try:
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
-
-# Tambahkan penjelasan tentang parameter
-with st.expander("ℹ️ Panduan Penggunaan"):
-    st.markdown("""
-    ### 🎛️ Panduan Parameter:
-    
-    **Jumlah Bulan Lookback:**
-    - Pilihan: 3, 6, 9, 12, 18, atau 24 bulan
-    - Default: 12 bulan (optimal untuk pola tahunan)
-    - Nilai lebih tinggi untuk pola jangka panjang
-    
-    **Jumlah Epoch:**
-    - Range: 50-300
-    - Default: 100
-    - Lebih tinggi = lebih akurat tapi lebih lama
-    
-    **Bulan Prediksi:**
-    - Pilihan: 3, 6, 12, 18, atau 24 bulan
-    - Default: 12 bulan
-    
-    ### 🛠️ Cara Penggunaan:
-    1. Pilih pintu masuk
-    2. Atur parameter
-    3. Klik 'Jalankan Model'
-    4. Lihat hasil di tab Prediksi
-    5. Download hasil jika perlu
-    """)
