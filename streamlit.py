@@ -128,7 +128,7 @@ if reset_params:
     time_steps = 12
     epochs = 100
     future_months = 12
-    st.experimental_rerun()
+    st.rerun()  # Changed from st.experimental_rerun()
 
 if not run_model:
     st.info("ℹ️ Silakan atur parameter dan klik 'Jalankan Model' untuk memulai prediksi")
