@@ -215,65 +215,65 @@ try:
     tab1, tab2 = st.tabs(["📉 Training vs Test", "🔮 Prediksi Masa Depan"])
 
     with tab1:
-        fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
-                y_train_actual, label='Train Aktual', color='blue')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
-                y_test_actual, label='Test Aktual', color='green')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
-                train_pred, label='Prediksi Train', linestyle='--', color='red')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
-                test_pred, label='Prediksi Test', linestyle='--', color='orange')
-        ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
-        ax1.legend()
-        ax1.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig1)
-
+    fig1 = plt.figure(figsize=(12, 6))
+    plt.plot(df_bandara['Tahun-Bulan'][time_steps:split+time_steps], scaler.inverse_transform(y_train.reshape(-1, 1)),
+             label='Train Aktual', color='blue')
+    plt.plot(df_bandara['Tahun-Bulan'][split+time_steps:], scaler.inverse_transform(y_test.reshape(-1, 1)),
+             label='Test Aktual', color='green')
+    plt.plot(df_bandara['Tahun-Bulan'][time_steps:split+time_steps], train_pred,
+             label='Prediksi Train', linestyle='--', color='red')
+    plt.plot(df_bandara['Tahun-Bulan'][split+time_steps:], test_pred,
+             label='Prediksi Test', linestyle='--', color='orange')
+    plt.title('Perbandingan Data Aktual vs Prediksi')
+    plt.legend()
+    st.pyplot(fig1)
+    
     with tab2:
-        # Prediksi masa depan
-        last_sequence = data_scaled[-time_steps:]
-        predictions = []
+    # Prediksi masa depan
+    last_sequence = data_scaled[-time_steps:]
+    predictions = []
 
-        for _ in range(future_months):
-            next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
-            predictions.append(next_pred[0,0])
-            last_sequence = np.append(last_sequence[1:], next_pred)
+    for _ in range(future_months):
+        next_pred = model.predict(last_sequence.reshape(1, time_steps, 1), verbose=0)
+        predictions.append(next_pred[0,0])
+        last_sequence = np.append(last_sequence[1:], next_pred)
 
-        predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
-        pred_dates = pd.date_range(
-            start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
-            periods=future_months,
-            freq='MS'
-        )
+    predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+    pred_dates = pd.date_range(
+        start=df_bandara['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
+        periods=future_months,
+        freq='MS'
+    )
 
-        # Plot prediksi
-        fig2, ax2 = plt.subplots(figsize=(12, 6))
-        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'],
-                label='Data Historis', color='blue')
-        ax2.plot(pred_dates, predictions,
-                label='Prediksi', color='red', marker='o')
+    # Tampilkan hasil
+    fig2 = plt.figure(figsize=(12, 6))
+    plt.plot(df_bandara['Tahun-Bulan'], df_bandara['Jumlah_Wisatawan'], label='Data Historis', color='blue')
+    plt.plot(pred_dates, predictions, label='Prediksi', color='red', marker='o')
 
-        # Anotasi nilai prediksi
-        for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            if i % max(1, future_months//6) == 0 or i == len(pred_dates)-1:
-                ax2.text(date, pred[0], f"{int(pred[0]):,}",
-                         ha='center', va='bottom', fontsize=9)
+    # Anotasi nilai prediksi
+    for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
+        if i % 3 == 0 or i == len(pred_dates)-1:  # Label setiap 3 bulan
+            plt.text(date, pred[0], f"{int(pred[0]):,}",
+                     ha='center', va='bottom')
 
-        ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
-        ax2.legend()
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig2)
+    plt.title(f'Prediksi {future_months} Bulan ke Depan')
+    plt.legend()
+    st.pyplot(fig2)
 
-        # Tabel hasil
-        pred_df = pd.DataFrame({
-            'Bulan': pred_dates.strftime('%B %Y'),
-            'Prediksi': predictions.flatten().astype(int),
-            'Perubahan (%)': np.round(
-                np.insert(
-                    np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100,
-                0, 0
-            ), 1)
-        })
+    # Tabel hasil
+    pred_df = pd.DataFrame({
+        'Bulan': pred_dates.strftime('%B %Y'),
+        'Prediksi': predictions.flatten().astype(int),
+        'Perubahan (%)': np.insert(np.diff(predictions.flatten()) / predictions.flatten()[:-1] * 100, 0, 0)
+    })
+
+    st.dataframe(
+        pred_df.style.format({
+            'Prediksi': '{:,.0f}',
+            'Perubahan (%)': '{:.1f}%'
+        }),
+        height=400
+    )
 
         st.dataframe(
             pred_df.style.format({
