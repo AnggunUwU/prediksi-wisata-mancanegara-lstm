@@ -152,8 +152,8 @@ if not run_model:
 # 3. Preprocessing Data
 # ======================================
 with st.spinner('🔨 Mempersiapkan data...'):
-    scaler = RobustScaler()
-    data_scaled = scaler.fit_transform(df_filtered[['Jumlah_Wisatawan']])
+    scaler = MinMaxScaler()
+    data_scaled = scaler.fit_transform(data)
 
     def create_dataset(data, steps):
         X, y = [], []
