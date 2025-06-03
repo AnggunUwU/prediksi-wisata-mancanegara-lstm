@@ -118,22 +118,11 @@ with col3:
 
 # Tombol Aksi
 st.markdown("---")
-col_run, col_reset = st.columns(2)
-with col_run:
-    run_model = st.button("🚀 Jalankan Model", type="primary", use_container_width=True)
-with col_reset:
-    reset_params = st.button("🔄 Reset Parameter", use_container_width=True)
-
-if reset_params:
-    time_steps = 12
-    epochs = 100
-    future_months = 12
-    st.rerun()  # Changed from st.experimental_rerun()
+run_model = st.button("🚀 Jalankan Model", type="primary", use_container_width=True)
 
 if not run_model:
     st.info("ℹ️ Silakan atur parameter dan klik 'Jalankan Model' untuk memulai prediksi")
     st.stop()
-
 # ======================================
 # 3. Preprocessing Data
 # ======================================
