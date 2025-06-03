@@ -129,8 +129,6 @@ with col2:
         "Jumlah Epoch", 
         min_value=50,
         max_value=300,
-        value=100,
-        step=50,
         help="Jumlah iterasi pelatihan model"
     )
 
