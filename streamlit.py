@@ -323,5 +323,3 @@ with st.expander("ℹ️ Panduan Penggunaan"):
     4. Lihat hasil di tab Prediksi
     5. Download hasil jika perlu
     """)
-
-kenapa saya prediksi bulan ke 3 yang keluar bulan januari dan februari saja
