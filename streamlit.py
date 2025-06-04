@@ -186,17 +186,24 @@ model.compile(optimizer='adam', loss='mse')
 progress_bar = st.progress(0)
 status_text = st.empty()
 
+progress_bar = st.progress(0)
+status_text = st.empty()
+
+class CustomCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        progress = (epoch + 1) / epochs
+        progress_bar.progress(progress)
+        status_text.text(f"⏳ Training: Epoch {epoch+1}/{epochs} - Loss: {logs['loss']:.4f}")
+
 history = model.fit(
-    X_train, 
+    X_train,
     y_train,
-    epochs=epochs,  # Using value from Streamlit slider
+    epochs=epochs,
     batch_size=32,
     validation_data=(X_test, y_test),
-    verbose=0
+    verbose=0,  # Disable Keras' default progress
+    callbacks=[CustomCallback()]
 )
-    progress = (epoch+1) / epochs
-    progress_bar.progress(progress)
-    status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
 
 progress_bar.empty()
 status_text.empty()
