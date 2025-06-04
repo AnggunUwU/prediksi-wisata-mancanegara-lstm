@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import MinMaxScaler 
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
@@ -152,6 +152,9 @@ if not run_model:
 # 3. Preprocessing Data
 # ======================================
 with st.spinner('🔨 Mempersiapkan data...'):
+    # First, extract the target values from filtered dataframe
+    data = df_filtered[['Jumlah_Wisatawan']].values.astype('float32')  # Make sure to extract the values
+    
     scaler = MinMaxScaler()
     data_scaled = scaler.fit_transform(data)
 
@@ -168,7 +171,6 @@ with st.spinner('🔨 Mempersiapkan data...'):
     except Exception as e:
         st.error(f"Error dalam preprocessing data: {str(e)}")
         st.stop()
-
 # ======================================
 # 4. Training Model
 # ======================================
