@@ -211,6 +211,9 @@ status_text.empty()
 # ======================================
 # 5. Evaluasi Model
 # ======================================
+# ======================================
+# 5. Evaluasi Model
+# ======================================
 def calculate_metrics(actual, predicted):
     actual = actual.flatten()
     predicted = predicted.flatten()
@@ -237,7 +240,6 @@ try:
 except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
-
 # Tampilkan metrik - YANG SUDAH DIPERBAIKI
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
