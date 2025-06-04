@@ -153,7 +153,7 @@ if not run_model:
 # ======================================
 with st.spinner('🔨 Mempersiapkan data...'):
     scaler = MinMaxScaler()
-    data_scaled = scaler.fit_transform(data)
+    data_scaled = scaler.fit_transform('Jumlah Wisatawan')
 
     def create_dataset(data, steps):
         X, y = [], []
