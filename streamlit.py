@@ -108,19 +108,18 @@ st.subheader("⚙️ Parameter Model")
 
 # Buat dalam bentuk columns
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.markdown("**🔧 Konfigurasi Model**")
     time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
-        options=list(range(1, 13)),  # Opsi 1 sampai 12
+        options=list(range(1, 25)),  # Opsi 1 sampai 24
         index=11,  # Default ke 12 bulan (indeks 11 karena list dimulai dari 0)
         help="Jumlah bulan sebelumnya yang digunakan untuk prediksi"
     )
     # Validasi lookback
-if time_steps >= len(df_filtered):
-    st.error(f"⚠️ Lookback ({time_steps} bulan) melebihi data historis ({len(df_filtered)} bulan)")
-    st.stop()
+    if time_steps >= len(df_filtered):
+        st.error(f"⚠️ Lookback ({time_steps} bulan) melebihi data historis ({len(df_filtered)} bulan)")
+        st.stop()
 
 with col2:
     st.markdown("**🔄 Pelatihan Model**")
