@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
