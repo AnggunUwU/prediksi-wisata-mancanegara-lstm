@@ -189,14 +189,14 @@ status_text = st.empty()
 history = model.fit(
     X_train, 
     y_train,
-    epochs=epochs,  # Menggunakan nilai dari slider Streamlit
+    epochs=epochs,  # Using value from Streamlit slider
     batch_size=32,
     validation_data=(X_test, y_test),
-    verbose=1  # Menampilkan progress bar bawaan Keras
+    verbose=1  # Shows Keras' default progress bar
 )
-    progress = (epoch) / epochs
+    progress = (epoch+1) / epochs
     progress_bar.progress(progress)
-    status_text.text(f"⏳ Training model: Epoch {epoch}/{epochs} selesai")
+    status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
 
 progress_bar.empty()
 status_text.empty()
