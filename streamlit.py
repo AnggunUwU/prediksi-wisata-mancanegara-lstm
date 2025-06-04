@@ -4,9 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import MinMaxScaler 
+from sklearn.preprocessing import MinMaxScaler  # Changed from RobustScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
+
 
 # Konfigurasi Aplikasi
 st.set_page_config(page_title="📅 Prediksi Wisatawan - LSTM", layout="wide")
@@ -108,14 +109,16 @@ st.subheader("⚙️ Parameter Model")
 
 # Buat dalam bentuk columns
 col1, col2, col3 = st.columns(3)
+
 with col1:
     st.markdown("**🔧 Konfigurasi Model**")
     time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
-        options=list(range(1, 25)),  # Opsi 1 sampai 24
-        index=11,  # Default ke 12 bulan (indeks 11 karena list dimulai dari 0)
+        options=[3, 6, 9, 12, 18, 24],
+        index=3,  # Default ke 12 bulan
         help="Jumlah bulan sebelumnya yang digunakan untuk prediksi"
     )
+    
     # Validasi lookback
     if time_steps >= len(df_filtered):
         st.error(f"⚠️ Lookback ({time_steps} bulan) melebihi data historis ({len(df_filtered)} bulan)")
@@ -149,6 +152,9 @@ if not run_model:
 # ======================================
 # 3. Preprocessing Data
 # ======================================
+# ======================================
+# 3. Preprocessing Data
+# ======================================
 with st.spinner('🔨 Mempersiapkan data...'):
     # First, extract the target values from filtered dataframe
     data = df_filtered[['Jumlah_Wisatawan']].values.astype('float32')  # Make sure to extract the values
@@ -169,6 +175,7 @@ with st.spinner('🔨 Mempersiapkan data...'):
     except Exception as e:
         st.error(f"Error dalam preprocessing data: {str(e)}")
         st.stop()
+
 # ======================================
 # 4. Training Model
 # ======================================
