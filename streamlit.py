@@ -1,10 +1,11 @@
+ini adalah kodingan streamlit
 import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
@@ -151,17 +152,9 @@ if not run_model:
 # ======================================
 # 3. Preprocessing Data
 # ======================================
-# 3. Preprocessing Data
 with st.spinner('🔨 Mempersiapkan data...'):
-    # Pastikan kolom numerik
-    df_filtered['Jumlah_Wisatawan'] = pd.to_numeric(df_filtered['Jumlah_Wisatawan'], errors='coerce').fillna(0)
-    
-    # Ambil data dan reshape
-    data = df_filtered['Jumlah_Wisatawan'].values.reshape(-1, 1)
-    
-    # Scaling data
     scaler = MinMaxScaler()
-    data_scaled = scaler.fit_transform(data)  # BENAR: menggunakan data numerik
+    data_scaled = scaler.fit_transform(data)
 
     def create_dataset(data, steps):
         X, y = [], []
@@ -329,3 +322,139 @@ try:
 
 except Exception as e:
     st.error(f"Error dalam visualisasi: {str(e)}")
+
+dan dibawah adalah kodingan ipnyb
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter, YearLocator
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.optimizers import Adam
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import mean_absolute_error
+# Membaca file Excel untuk setiap tahun
+data_2017 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2017.xlsx',header=0)
+data_2018 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2018.xlsx',header=0)
+data_2019 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2019.xlsx',header=0)
+data_2020 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2020.xlsx',header=0)
+data_2021 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2021.xlsx',header=0)
+data_2022 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2022.xlsx',header=0)
+data_2023 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2023.xlsx',header=0)
+data_2024 = pd.read_excel('/content/drive/MyDrive/skripsi/pintu/wisman2024.xlsx',header=0)
+
+# Menggabungkan data dari semua tahun
+df = pd.concat([data_2017, data_2018, data_2019, data_2020, data_2021, data_2022, data_2023, data_2024], axis=0)
+df = df.replace('-',0)
+df = df.fillna(0)
+df = df.replace(',','')
+df['Tahun'] = df['Tahun'].astype(int)
+# Memilih kolom numerik
+numeric_columns = df.select_dtypes(include=[np.number]).columns
+
+# Menambahkan kolom 'Tahunan' yang berisi jumlah nilai setiap baris hanya dari kolom numerik
+# Menggunakan .sum(axis=1) untuk menjumlahkan nilai-nilai dalam setiap baris dari kolom numerik
+df['Tahunan'] = df[numeric_columns].sum(axis=1)
+df['Pintu Masuk'] = df['Pintu Masuk'].str.lower().str.strip()
+df_save = df[df['Pintu Masuk'].isin(['total'])]
+df_save.to_excel('data.xlsx'),
+df0=pd.read_excel('data.xlsx')
+# Mengubah format data dari bentuk lebar (wide) ke panjang (long)
+df0 = df0.melt(id_vars=['Pintu Masuk', 'Tahun'],
+                  value_vars=['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+                              'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                  var_name='Bulan', value_name='Jumlah_Wisatawan')
+bulan_mapping = {"Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+                 "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12}
+df0['Bulan'] = df0['Bulan'].map(bulan_mapping)
+# Mengonversi kolom 'Tahun' ke string, lalu menggabungkan dengan kolom 'Bulan'
+df0['Tahun-Bulan'] = pd.to_datetime(df0['Tahun'].astype(str) + '-' + df0['Bulan'].astype(str) + '-01')
+df0 = df0.sort_values('Tahun-Bulan')
+data = df0['Jumlah_Wisatawan'].values.reshape(-1, 1)
+# 2. Normalisasi
+scaler = MinMaxScaler()
+data_scaled = scaler.fit_transform(data)
+# 3. Membuat Dataset
+def create_dataset(data, time_steps=12):
+    X, y = [], []
+    for i in range(len(data)-time_steps):
+        X.append(data[i:(i+time_steps), 0])
+        y.append(data[i+time_steps, 0])
+    return np.array(X), np.array(y)
+
+X, y = create_dataset(data_scaled, time_steps=12)
+X = X.reshape(X.shape[0], X.shape[1], 1)
+# 4. Split Data
+split = int(0.8 * len(X))
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
+
+# 5. Build Model - Correct for time_steps=1
+model = Sequential([
+    LSTM(64, activation='relu', input_shape=(12, 1), return_sequences=True),
+    LSTM(32, activation='relu'),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+# 6. Training
+history = model.fit(X_train, y_train, epochs=80, batch_size=32,
+                   validation_data=(X_test, y_test), verbose=1)
+
+# 7. Prediksi
+train_predict = model.predict(X_train)
+test_predict = model.predict(X_test)
+# Inverse Scaling
+train_predict = scaler.inverse_transform(train_predict)
+y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
+test_predict = scaler.inverse_transform(test_predict)
+y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
+
+# 8. Evaluasi
+def calculate_mape(actual, predicted):
+    # Mengabaikan data dengan nilai nol
+    non_zero_indices = actual != 0
+    actual_non_zero = actual[non_zero_indices]
+    predicted_non_zero = predicted[non_zero_indices]
+    return np.mean(np.abs((actual_non_zero - predicted_non_zero) / actual_non_zero)) * 100
+
+train_mae = mean_absolute_error(y_train_actual, train_predict)
+test_mae = mean_absolute_error(y_test_actual, test_predict)
+train_mape = calculate_mape(y_train_actual, train_predict)
+test_mape = calculate_mape(y_test_actual, test_predict)
+
+print(f"Train MAE: {train_mae:.2f}")
+print(f"Test MAE: {test_mae:.2f}")
+print(f"Train MAPE: {train_mape:.2f}%")
+print(f"Test MAPE: {test_mape:.2f}%")
+
+# Ambil 12 bulan terakhir sebagai input prediksi
+last_12_months = df0['Jumlah_Wisatawan'].values[-12:].reshape(1, -1, 1)  # Data sudah dinormalisasi
+last_12_months_scaled = scaler.transform(last_12_months.reshape(-1, 1)).reshape(1, 12, 1)
+# Fungsi prediksi multi-step
+def predict_next_six_months(model, initial_input):
+    predictions = []
+    current_input = initial_input.copy()
+
+    for _ in range(6):  # Prediksi 6 bulan ke depan
+        next_pred_scaled = model.predict(current_input, verbose=0)
+        next_pred = scaler.inverse_transform(next_pred_scaled)[0][0]
+        predictions.append(next_pred)
+        # Update input untuk prediksi berikutnya
+        current_input = np.append(current_input[:, 1:, :], next_pred_scaled.reshape(1, 1, 1), axis=1)
+
+    return predictions
+# Dapatkan prediksi
+monthly_predictions = predict_next_six_months(model, last_12_months_scaled)
+months_2025 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni']
+# Tampilkan hasil
+print("=== Prediksi Kedatangan Wisatawan 2025 ===")
+for month, pred in zip(months_2025, monthly_predictions):
+    print(f"{month}: {int(pred):,} wisatawan")
+# Timeline untuk training, test, dan prediksi 2025
+train_dates = df0['Tahun-Bulan'].iloc[12 : split+12]  # 12 bulan pertama jadi input
+test_dates = df0['Tahun-Bulan'].iloc[split+12 : split+12+len(test_predict)]
+prediction_date = pd.to_datetime('2025-06-01')
