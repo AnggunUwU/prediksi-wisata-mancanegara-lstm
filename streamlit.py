@@ -192,7 +192,7 @@ history = model.fit(
     epochs=epochs,  # Using value from Streamlit slider
     batch_size=32,
     validation_data=(X_test, y_test),
-    verbose=1  # Shows Keras' default progress bar
+    verbose=0
 )
     progress = (epoch+1) / epochs
     progress_bar.progress(progress)
