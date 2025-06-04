@@ -114,12 +114,12 @@ with col1:
     st.markdown("**🔧 Konfigurasi Model**")
     time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
-        options=[3, 6, 9, 12, 18, 24],
-        index=3,  # Default ke 12 bulan
+        options=[*range(1, 11), 12, 18, 24],  # 1-10, lalu 12,18,24
+        index=11,  # Default ke 12 bulan
         help="Jumlah bulan sebelumnya yang digunakan untuk prediksi"
     )
     
-    # Validasi lookback
+        # Validasi lookback
     if time_steps >= len(df_filtered):
         st.error(f"⚠️ Lookback ({time_steps} bulan) melebihi data historis ({len(df_filtered)} bulan)")
         st.stop()
