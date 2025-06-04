@@ -151,9 +151,17 @@ if not run_model:
 # ======================================
 # 3. Preprocessing Data
 # ======================================
+# 3. Preprocessing Data
 with st.spinner('🔨 Mempersiapkan data...'):
+    # Pastikan kolom numerik
+    df_filtered['Jumlah_Wisatawan'] = pd.to_numeric(df_filtered['Jumlah_Wisatawan'], errors='coerce').fillna(0)
+    
+    # Ambil data dan reshape
+    data = df_filtered['Jumlah_Wisatawan'].values.reshape(-1, 1)
+    
+    # Scaling data
     scaler = MinMaxScaler()
-    data_scaled = scaler.fit_transform('data')
+    data_scaled = scaler.fit_transform(data)  # BENAR: menggunakan data numerik
 
     def create_dataset(data, steps):
         X, y = [], []
