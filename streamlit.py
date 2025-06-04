@@ -194,9 +194,9 @@ history = model.fit(
     validation_data=(X_test, y_test),
     verbose=1  # Menampilkan progress bar bawaan Keras
 )
-    progress = (epoch + 1) / epochs
+    progress = (epoch) / epochs
     progress_bar.progress(progress)
-    status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+    status_text.text(f"⏳ Training model: Epoch {epoch}/{epochs} selesai")
 
 progress_bar.empty()
 status_text.empty()
