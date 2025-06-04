@@ -213,13 +213,20 @@ def calculate_metrics(actual, predicted):
     return mae, mape
 
 try:
-    train_pred = scaler.inverse_transform(model.predict(X_train))
-    test_pred = scaler.inverse_transform(model.predict(X_test))
+    # Pertama lakukan prediksi (masih dalam bentuk scaled)
+    train_pred = model.predict(X_train)  # Hasilnya masih scaled
+    test_pred = model.predict(X_test)    # Hasilnya masih scaled
+    
+    # Lalu inverse scaling ke nilai asli
+    train_predict = scaler.inverse_transform(train_pred)
     y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
+    test_predict = scaler.inverse_transform(test_pred)
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-
-    train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
-    test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
+    
+    # Hitung metrik evaluasi
+    train_mae, train_mape = calculate_metrics(y_train_actual, train_predict)
+    test_mae, test_mape = calculate_metrics(y_test_actual, test_predict)
+    
 except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
