@@ -186,31 +186,20 @@ model.compile(optimizer='adam', loss='mse')
 progress_bar = st.progress(0)
 status_text = st.empty()
 
-progress_bar = st.progress(0)
-status_text = st.empty()
-
-class CustomCallback(tf.keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        progress = (epoch + 1) / epochs
-        progress_bar.progress(progress)
-        status_text.text(f"⏳ Training: Epoch {epoch+1}/{epochs} - Loss: {logs['loss']:.4f}")
-
-history = model.fit(
-    X_train,
-    y_train,
-    epochs=epochs,
-    batch_size=32,
-    validation_data=(X_test, y_test),
-    verbose=0,  # Disable Keras' default progress
-    callbacks=[CustomCallback()]
-)
+for epoch in range(epochs):
+    history = model.fit(
+        X_train, y_train,
+        epochs=1,
+        validation_data=(X_test, y_test),
+        verbose=0
+    )
+    progress = (epoch + 1) / epochs
+    progress_bar.progress(progress)
+    status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
 
 progress_bar.empty()
 status_text.empty()
 
-# ======================================
-# 5. Evaluasi Model
-# ======================================
 # ======================================
 # 5. Evaluasi Model
 # ======================================
@@ -223,23 +212,17 @@ def calculate_metrics(actual, predicted):
     return mae, mape
 
 try:
-    # Pertama lakukan prediksi (masih dalam bentuk scaled)
-    train_pred = model.predict(X_train)  # Hasilnya masih scaled
-    test_pred = model.predict(X_test)    # Hasilnya masih scaled
-    
-    # Lalu inverse scaling ke nilai asli
-    train_predict = scaler.inverse_transform(train_pred)
+    train_pred = scaler.inverse_transform(model.predict(X_train))
+    test_pred = scaler.inverse_transform(model.predict(X_test))
     y_train_actual = scaler.inverse_transform(y_train.reshape(-1, 1))
-    test_predict = scaler.inverse_transform(test_pred)
     y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-    
-    # Hitung metrik evaluasi
-    train_mae, train_mape = calculate_metrics(y_train_actual, train_predict)
-    test_mae, test_mape = calculate_metrics(y_test_actual, test_predict)
-    
+
+    train_mae, train_mape = calculate_metrics(y_train_actual, train_pred)
+    test_mae, test_mape = calculate_metrics(y_test_actual, test_pred)
 except Exception as e:
     st.error(f"Error dalam evaluasi model: {str(e)}")
     st.stop()
+
 # Tampilkan metrik - YANG SUDAH DIPERBAIKI
 st.subheader("📊 Evaluasi Model")
 col1, col2 = st.columns(2)
