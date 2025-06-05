@@ -184,8 +184,8 @@ X_train, X_test = X[:split], X[split:]
 y_train, y_test = y[:split], y[split:]
 
 model = Sequential([
-    LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
-    LSTM(32, activation='tanh'),
+    LSTM(64, activation='relu', input_shape=(time_steps, 1), return_sequences=True),
+    LSTM(32, activation='relu'),
     Dense(1)
 ])
 model.compile(optimizer='adam', loss='mse')
