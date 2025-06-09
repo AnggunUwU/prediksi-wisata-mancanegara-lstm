@@ -19,14 +19,13 @@ with st.expander("ℹ️ Panduan Penggunaan"):
     ### 🎛️ Panduan Parameter:
     
     **Jumlah Bulan Lookback:**
-    - Pilihan: 3, 6, 9, 12, 18, atau 24 bulan
+    - Pilihan: 1- 24 bulan
     - Default: 12 bulan (optimal untuk pola tahunan)
-    - Nilai lebih tinggi untuk pola jangka panjang
     
     **Jumlah Epoch:**
     - Range: 50-300
     - Default: 100
-    - Lebih tinggi = lebih akurat tapi lebih lama
+    - Lebih tinggi = lebih akurat tapi lebih lama kemungkinan bisa overfitting
     
     **Bulan Prediksi:**
     - Pilihan: Range 1 - 24 bulan
