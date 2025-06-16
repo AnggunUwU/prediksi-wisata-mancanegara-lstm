@@ -69,8 +69,8 @@ col1, col2, col3 = st.columns(3)
 with col1:
     time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
-        options=[*range(1, 11), 12, 18, 24],
-        value=12
+        options=[*range(1, 13)],  # Hanya 1-12
+        index=11  # Default ke 12 (indeks terakhir)
     )
     
 with col2:
