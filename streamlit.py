@@ -101,17 +101,25 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
         X_train, X_test = X[:split], X[split:]
         y_train, y_test = y[:split], y[split:]
 
-    # ======================================
-    # 4. Training Model
-    # ======================================
-    with st.spinner('🤖 Sedang melatih model LSTM...'):
-        model = Sequential([
-            LSTM(64, activation='relu', input_shape=(time_steps, 1), return_sequences=True),
-            LSTM(32, activation='relu'),
-            Dense(1)
-        ])
-        model.compile(optimizer='adam', loss='mse')
-        model.fit(X_train, y_train, epochs=epochs, validation_data=(X_test, y_test), verbose=0)
+# ======================================
+# 4. Training Model - TAMPILAN LOADING TIDAK DIUBAH
+# ======================================
+progress_bar = st.progress(0)
+status_text = st.empty()
+
+for epoch in range(epochs):
+    history = model.fit(
+        X_train, y_train,
+        epochs=1,
+        validation_data=(X_test, y_test),
+        verbose=0
+    )
+    progress = (epoch + 1) / epochs
+    progress_bar.progress(progress)
+    status_text.text(f"('🤖⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+
+progress_bar.empty()
+status_text.empty()
 
     # ======================================
     # 5. Evaluasi Model
