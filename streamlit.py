@@ -101,25 +101,32 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
         X_train, X_test = X[:split], X[split:]
         y_train, y_test = y[:split], y[split:]
 
-# ======================================
-# 4. Training Model - TAMPILAN LOADING TIDAK DIUBAH
-# ======================================
-progress_bar = st.progress(0)
-status_text = st.empty()
+    # ======================================
+    # 4. Training Model (TAMPILAN LOADING ASLI)
+    # ======================================
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-for epoch in range(epochs):
-    history = model.fit(
-        X_train, y_train,
-        epochs=1,
-        validation_data=(X_test, y_test),
-        verbose=0
-    )
-    progress = (epoch + 1) / epochs
-    progress_bar.progress(progress)
-    status_text.text(f"('🤖⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+    model = Sequential([
+        LSTM(64, activation='relu', input_shape=(time_steps, 1), return_sequences=True),
+        LSTM(32, activation='relu'),
+        Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mse')
 
-progress_bar.empty()
-status_text.empty()
+    for epoch in range(epochs):
+        history = model.fit(
+            X_train, y_train,
+            epochs=1,
+            validation_data=(X_test, y_test),
+            verbose=0
+        )
+        progress = (epoch + 1) / epochs
+        progress_bar.progress(progress)
+        status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+
+    progress_bar.empty()
+    status_text.empty()
 
     # ======================================
     # 5. Evaluasi Model
@@ -146,7 +153,8 @@ status_text.empty()
     col2.metric("Test MAPE", f"{test_mape:.1f}%")
 
     # ======================================
-    # 6. Visualisasi Interaktif (Plotly)
+    # 6. Visualisasi Interaktif dengan Plotly 
+    #    (TAMPILAN LOADING TETAP SAMA)
     # ======================================
     st.subheader("📈 Hasil Prediksi Interaktif")
     tab1, tab2 = st.tabs(["📊 Training vs Test", "🔮 Prediksi Masa Depan"])
@@ -239,7 +247,8 @@ status_text.empty()
                 'Prediksi': '{:,.0f}',
                 'Perubahan (%)': '{:.1f}%'
             }).background_gradient(cmap='Blues', subset=['Perubahan (%)']),
-            height=min(400, 35*future_months)
+            height=min(400, 35*future_months),
+            use_container_width=True
         )
 
         # Ekspor hasil
@@ -247,6 +256,7 @@ status_text.empty()
         st.download_button(
             label="📥 Download Hasil Prediksi (CSV)",
             data=csv,
-            file_name=f"prediksi_{selected_pintu}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime='text/csv'
+            file_name=f"prediksi_{selected_pintu.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime='text/csv',
+            use_container_width=True
         )
