@@ -237,7 +237,7 @@ col2.metric("Test MAPE", f"{test_mape:.1f}%",
            "Baik" if test_mape < 10 else "Cukup" if test_mape < 20 else "Perlu Perbaikan")
 
 # ======================================
-# 6. Visualisasi Hasil
+# 6. Enhanced Interactive Visualization
 # ======================================
 st.subheader("📈 Hasil Prediksi")
 
@@ -246,19 +246,71 @@ try:
     tab1, tab2 = st.tabs(["📉 Training vs Test", "🔮 Prediksi Masa Depan"])
 
     with tab1:
-        fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
-                y_train_actual, label='Train Aktual', color='blue')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
-                y_test_actual, label='Test Aktual', color='green')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
-                train_pred, label='Prediksi Train', linestyle='--', color='red')
-        ax1.plot(df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
-                test_pred, label='Prediksi Test', linestyle='--', color='orange')
-        ax1.set_title(f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}')
-        ax1.legend()
-        ax1.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig1)
+        import plotly.graph_objects as go
+        
+        # Create figure
+        fig1 = go.Figure()
+        
+        # Add traces
+        fig1.add_trace(go.Scatter(
+            x=df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
+            y=y_train_actual.flatten(),
+            name='Train Aktual',
+            line=dict(color='blue', width=2),
+            mode='lines'
+        ))
+        
+        fig1.add_trace(go.Scatter(
+            x=df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
+            y=y_test_actual.flatten(),
+            name='Test Aktual',
+            line=dict(color='green', width=2),
+            mode='lines'
+        ))
+        
+        fig1.add_trace(go.Scatter(
+            x=df_filtered['Tahun-Bulan'].iloc[time_steps:split+time_steps],
+            y=train_pred.flatten(),
+            name='Prediksi Train',
+            line=dict(color='red', width=2, dash='dash'),
+            mode='lines'
+        ))
+        
+        fig1.add_trace(go.Scatter(
+            x=df_filtered['Tahun-Bulan'].iloc[split+time_steps:],
+            y=test_pred.flatten(),
+            name='Prediksi Test',
+            line=dict(color='orange', width=2, dash='dash'),
+            mode='lines'
+        ))
+        
+        # Update layout
+        fig1.update_layout(
+            title=f'Perbandingan Data Aktual vs Prediksi - {selected_pintu}',
+            xaxis_title='Bulan',
+            yaxis_title='Jumlah Wisatawan',
+            hovermode='x unified',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+            template='plotly_white',
+            height=600,
+            margin=dict(l=50, r=50, b=50, t=80)
+        )
+        
+        # Add range slider
+        fig1.update_xaxes(
+            rangeslider_visible=True,
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=1, label="1m", step="month", stepmode="backward"),
+                    dict(count=6, label="6m", step="month", stepmode="backward"),
+                    dict(count=1, label="YTD", step="year", stepmode="todate"),
+                    dict(count=1, label="1y", step="year", stepmode="backward"),
+                    dict(step="all")
+                ])
+            )
+        )
+        
+        st.plotly_chart(fig1, use_container_width=True)
 
     with tab2:
         # Prediksi masa depan
@@ -270,32 +322,85 @@ try:
             predictions.append(next_pred[0,0])
             last_sequence = np.append(last_sequence[1:], next_pred)
 
-        predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)
         pred_dates = pd.date_range(
             start=df_filtered['Tahun-Bulan'].iloc[-1] + pd.DateOffset(months=1),
             periods=future_months,
             freq='MS'
         )
 
-        # Plot prediksi
-        fig2, ax2 = plt.subplots(figsize=(12, 6))
-        ax2.plot(df_filtered['Tahun-Bulan'], df_filtered['Jumlah_Wisatawan'],
-                label='Data Historis', color='blue')
-        ax2.plot(pred_dates, predictions,
-                label='Prediksi', color='red', marker='o')
+        # Create figure
+        fig2 = go.Figure()
+        
+        # Add historical data
+        fig2.add_trace(go.Scatter(
+            x=df_filtered['Tahun-Bulan'],
+            y=df_filtered['Jumlah_Wisatawan'],
+            name='Data Historis',
+            line=dict(color='blue', width=2),
+            mode='lines'
+        ))
+        
+        # Add predictions
+        fig2.add_trace(go.Scatter(
+            x=pred_dates,
+            y=predictions.flatten(),
+            name='Prediksi',
+            line=dict(color='red', width=2),
+            mode='lines+markers',
+            marker=dict(size=8)
+        ))
+        
+        # Add confidence interval (example using simple moving std)
+        if future_months > 1:
+            rolling_std = np.std(df_filtered['Jumlah_Wisatawan'].rolling(12).std().dropna())
+            fig2.add_trace(go.Scatter(
+                x=pred_dates,
+                y=predictions.flatten() + 1.96 * rolling_std,
+                fill=None,
+                mode='lines',
+                line=dict(width=0),
+                showlegend=False,
+                hoverinfo='skip'
+            ))
+            
+            fig2.add_trace(go.Scatter(
+                x=pred_dates,
+                y=predictions.flatten() - 1.96 * rolling_std,
+                fill='tonexty',
+                mode='lines',
+                line=dict(width=0),
+                name='95% Confidence Interval',
+                fillcolor='rgba(255, 0, 0, 0.1)'
+            ))
+        
+        # Update layout
+        fig2.update_layout(
+            title=f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}',
+            xaxis_title='Bulan',
+            yaxis_title='Jumlah Wisatawan',
+            hovermode='x unified',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+            template='plotly_white',
+            height=600,
+            margin=dict(l=50, r=50, b=50, t=80)
+        )
+        
+        # Add range slider
+        fig2.update_xaxes(
+            rangeslider_visible=True,
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=6, label="6m", step="month", stepmode="backward"),
+                    dict(count=1, label="1y", step="year", stepmode="backward"),
+                    dict(step="all")
+                ])
+            )
+        )
+        
+        st.plotly_chart(fig2, use_container_width=True)
 
-        # Anotasi nilai prediksi
-        for i, (date, pred) in enumerate(zip(pred_dates, predictions)):
-            if i % max(1, future_months//6) == 0 or i == len(pred_dates)-1:
-                ax2.text(date, pred[0], f"{int(pred[0]):,}",
-                         ha='center', va='bottom', fontsize=9)
-
-        ax2.set_title(f'Prediksi {future_months} Bulan ke Depan - {selected_pintu}')
-        ax2.legend()
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig2)
-
-        # Tabel hasil
+        # Tabel hasil interaktif
         pred_df = pd.DataFrame({
             'Bulan': pred_dates.strftime('%B %Y'),
             'Prediksi': predictions.flatten().astype(int),
@@ -305,15 +410,44 @@ try:
                 0, 0
             ), 1)
         })
-
-        st.dataframe(
-            pred_df.style.format({
-                'Prediksi': '{:,.0f}',
-                'Perubahan (%)': '{:.1f}%'
-            }).background_gradient(cmap='Blues', subset=['Perubahan (%)']),
-            height=min(400, 35*future_months),
-            use_container_width=True
-        )
+        
+        # Create interactive table with AgGrid
+        try:
+            from st_aggrid import AgGrid, GridOptionsBuilder
+            
+            gb = GridOptionsBuilder.from_dataframe(pred_df)
+            gb.configure_default_column(
+                filterable=True,
+                sortable=True,
+                resizable=True,
+                editable=False
+            )
+            gb.configure_column('Prediksi', type=['numericColumn','numberColumnFilter','customNumericFormat'], 
+                               valueFormatter="value.toLocaleString('en-US')")
+            gb.configure_column('Perubahan (%)', type=['numericColumn','numberColumnFilter'], 
+                               cellStyle={'color': 'white', 'background-color': '#1f77b4'})
+            
+            grid_options = gb.build()
+            
+            AgGrid(
+                pred_df,
+                gridOptions=grid_options,
+                height=min(400, 35*future_months),
+                width='100%',
+                theme='streamlit',
+                fit_columns_on_grid_load=True,
+                allow_unsafe_jscode=True
+            )
+        except:
+            # Fallback to st.dataframe if AgGrid not available
+            st.dataframe(
+                pred_df.style.format({
+                    'Prediksi': '{:,.0f}',
+                    'Perubahan (%)': '{:.1f}%'
+                }).background_gradient(cmap='Blues', subset=['Perubahan (%)']),
+                height=min(400, 35*future_months),
+                use_container_width=True
+            )
 
         # Ekspor hasil
         csv = pred_df.to_csv(index=False).encode('utf-8')
