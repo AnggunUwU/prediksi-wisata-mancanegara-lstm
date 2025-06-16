@@ -70,7 +70,7 @@ with col1:
     time_steps = st.selectbox(
         "Jumlah Bulan Lookback",
         options=[*range(1, 11), 12, 18, 24],
-        index=11
+        value=12
     )
     
 with col2:
