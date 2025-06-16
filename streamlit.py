@@ -102,7 +102,7 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
         y_train, y_test = y[:split], y[split:]
 
     # ======================================
-    # 4. Training Model (TAMPILAN LOADING ASLI)
+    # 4. Training Model
     # ======================================
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -123,7 +123,7 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
         )
         progress = (epoch + 1) / epochs
         progress_bar.progress(progress)
-        status_text.text(f"⏳ Training model: Epoch {epoch+1}/{epochs} selesai")
+        status_text.text(f"⏳🤖 Training model: Epoch {epoch+1}/{epochs} selesai")
 
     progress_bar.empty()
     status_text.empty()
