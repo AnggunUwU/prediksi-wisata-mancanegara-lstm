@@ -59,7 +59,10 @@ df_filtered = df[df['Pintu Masuk'] == selected_pintu].sort_values('Tahun-Bulan')
 if len(df_filtered) < 24:
     st.error(f"⚠️ Data historis untuk {selected_pintu} hanya {len(df_filtered)} bulan, minimal 24 bulan diperlukan")
     st.stop()
-
+    
+# Tampilkan data
+with st.expander(f"🔍 Lihat Data Historis {selected_pintu}"):
+    st.dataframe(df_filtered, height=200)
 # ======================================
 # 2. Panel Kontrol
 # ======================================
