@@ -18,7 +18,7 @@ with st.expander("ℹ️ Panduan Penggunaan"):
     ### 🎛️ Panduan Parameter:
     
     *Jumlah Bulan Lookback:*
-    - Pilihan: 1- 24 bulan
+    - Pilihan: 1- 12 bulan
     - Default: 12 bulan (optimal untuk pola tahunan)
     
     *Jumlah Epoch:*
