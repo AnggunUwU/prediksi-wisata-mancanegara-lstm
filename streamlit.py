@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
@@ -141,7 +141,7 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
         LSTM(32, activation='relu'),
         Dense(1)
     ])
-    model.compile(optimizer='RMSprop', loss='mse')
+    model.compile(optimizer='Adam', loss='mse')
 
     for epoch in range(epochs):
         history = model.fit(
