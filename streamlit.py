@@ -137,8 +137,8 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
     status_text = st.empty()
 
     model = Sequential([
-        LSTM(64, activation='relu', input_shape=(time_steps, 1), return_sequences=True),
-        LSTM(32, activation='relu'),
+        LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
+        LSTM(32, activation='tanh'),
         Dense(1)
     ])
     model.compile(optimizer='Adam', loss='mse')
