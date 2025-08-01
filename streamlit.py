@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.optimizers import Adam
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_absolute_error
 from datetime import datetime
 
@@ -114,7 +114,7 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
     # ======================================
     with st.spinner('🔨 Mempersiapkan data...'):
         data = df_filtered[['Jumlah_Wisatawan']].values.astype('float32')
-        scaler = MinMaxScaler()
+        scaler = RobustScaler()
         data_scaled = scaler.fit_transform(data)
 
         def create_dataset(data, steps):
@@ -137,8 +137,8 @@ if st.button("🚀 Jalankan Model", type="primary", use_container_width=True):
     status_text = st.empty()
 
     model = Sequential([
-        LSTM(64, activation='tanh', input_shape=(time_steps, 1), return_sequences=True),
-        LSTM(32, activation='tanh'),
+        LSTM(64, activation='reLu', input_shape=(time_steps, 1), return_sequences=True),
+        LSTM(32, activation='reLu'),
         Dense(1)
     ])
     model.compile(optimizer='Adam', loss='mse')
